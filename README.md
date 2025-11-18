@@ -230,3 +230,5 @@ For issues or questions, please create an issue in the project repository.
 **Made with Python**
 
 Stay hydrated!
+
+Download [here](https://github.com/oFive-0s/HydraPing/releases)
