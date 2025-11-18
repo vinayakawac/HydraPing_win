@@ -12,7 +12,7 @@ Always-on-top glassmorphic overlay perfect for any workflow:
 - **Auto-hide on sleep** - respects your sleep schedule
 - **Theme-aware** - 6 beautiful glassmorphic themes
 - **Performance optimized** - minimal CPU/memory footprint
-- **Perfect for gaming, work, or study**
+- **Perfect for work and study**
 
 ## Features
 
@@ -232,3 +232,4 @@ For issues or questions, please create an issue in the project repository.
 Stay hydrated!
 
 Download [here](https://github.com/oFive-0s/HydraPing/releases)
+
