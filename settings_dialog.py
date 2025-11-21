@@ -12,6 +12,7 @@ class SettingsDialog(QtWidgets.QDialog):
     """Settings dialog accessible from overlay"""
     
     settings_updated = QtCore.Signal(dict)
+    water_reset = QtCore.Signal()
     
     def __init__(self, data_manager, parent=None):
         super().__init__(parent)
@@ -124,8 +125,8 @@ class SettingsDialog(QtWidgets.QDialog):
         
         # Reminder Interval
         self.interval_spin = QtWidgets.QSpinBox()
-        self.interval_spin.setRange(5, 240)
-        self.interval_spin.setSingleStep(5)
+        self.interval_spin.setRange(1, 240)
+        self.interval_spin.setSingleStep(1)
         self.interval_spin.setSuffix(" min")
         self.interval_spin.setMinimumWidth(150)
         self.interval_spin.setStyleSheet(self.goal_spin.styleSheet())
@@ -139,6 +140,15 @@ class SettingsDialog(QtWidgets.QDialog):
         self.sip_spin.setMinimumWidth(150)
         self.sip_spin.setStyleSheet(self.goal_spin.styleSheet())
         form_layout.addRow("Default Sip Size:", self.sip_spin)
+        
+        # Snooze Duration
+        self.snooze_spin = QtWidgets.QSpinBox()
+        self.snooze_spin.setRange(1, 30)
+        self.snooze_spin.setSingleStep(1)
+        self.snooze_spin.setSuffix(" min")
+        self.snooze_spin.setMinimumWidth(150)
+        self.snooze_spin.setStyleSheet(self.goal_spin.styleSheet())
+        form_layout.addRow("Snooze Duration:", self.snooze_spin)
         
         # Theme Selection
         self.theme_combo = QtWidgets.QComboBox()
@@ -558,6 +568,7 @@ class SettingsDialog(QtWidgets.QDialog):
         self.goal_spin.setValue(self.settings.get('daily_goal_ml', 2000))
         self.interval_spin.setValue(self.settings.get('reminder_interval_minutes', 60))
         self.sip_spin.setValue(self.settings.get('default_sip_ml', 250))
+        self.snooze_spin.setValue(self.settings.get('snooze_duration_minutes', 5))
         self.theme_combo.setCurrentText(self.settings.get('theme', 'Dark Glassmorphic'))
         self.auto_launch_check.setChecked(is_auto_launch_enabled())
         self.sound_check.setChecked(self.settings.get('chime_enabled', True))
@@ -582,6 +593,7 @@ class SettingsDialog(QtWidgets.QDialog):
         new_goal = self.goal_spin.value()
         new_interval = self.interval_spin.value()
         new_sip = self.sip_spin.value()
+        new_snooze = self.snooze_spin.value()
         new_theme = self.theme_combo.currentText()
         sound_enabled = self.sound_check.isChecked()
         
@@ -600,6 +612,7 @@ class SettingsDialog(QtWidgets.QDialog):
             daily_goal_ml=new_goal,
             reminder_interval_minutes=new_interval,
             default_sip_ml=new_sip,
+            snooze_duration_minutes=new_snooze,
             theme=new_theme,
             chime_enabled=sound_enabled,
             custom_sound_path=custom_sound_path,
@@ -626,6 +639,7 @@ class SettingsDialog(QtWidgets.QDialog):
             'daily_goal_ml': new_goal,
             'reminder_interval_minutes': new_interval,
             'default_sip_ml': new_sip,
+            'snooze_duration_minutes': new_snooze,
             'theme': new_theme,
             'chime_enabled': sound_enabled,
             'custom_sound_path': custom_sound_path,
@@ -651,6 +665,7 @@ class SettingsDialog(QtWidgets.QDialog):
             self.goal_spin.setValue(2000)
             self.interval_spin.setValue(60)
             self.sip_spin.setValue(250)
+            self.snooze_spin.setValue(5)
             self.theme_combo.setCurrentText('Dark Glassmorphic')
             self.sound_check.setChecked(True)
             self.sound_path_label.setText("Default")
@@ -672,6 +687,7 @@ class SettingsDialog(QtWidgets.QDialog):
         if reply == QtWidgets.QMessageBox.StandardButton.Yes:
             # Clear today's hydration logs
             self.data_manager.reset_today()
+            self.water_reset.emit()  # Notify controller to update overlay
             QtWidgets.QMessageBox.information(
                 self,
                 'Water Reset',

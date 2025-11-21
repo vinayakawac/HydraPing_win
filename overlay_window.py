@@ -15,7 +15,7 @@ class CircularProgress(QtWidgets.QWidget):
     
     def __init__(self, parent=None, theme_manager=None):
         super().__init__(parent)
-        self.setFixedSize(40, 40)
+        self.setFixedSize(35, 35)
         self._progress = 0  # 0-100
         self._animated_progress = 0
         self.theme_manager = theme_manager or ThemeManager()
@@ -50,68 +50,62 @@ class CircularProgress(QtWidgets.QWidget):
         if not self.isVisible():
             return
             
-        painter = QtGui.QPainter()
-        if not painter.begin(self):
-            return
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+        
+        # Calculate dimensions - center vertically in parent
+        width = self.width()
+        height = self.height()
+        center = QtCore.QPointF(width / 2, height / 2)
+        radius = min(width, height) / 2 - 3
+        
+        # Background circle
+        pen = QtGui.QPen(QtGui.QColor(255, 255, 255, 30))
+        pen.setWidth(3)
+        pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+        painter.drawEllipse(center, radius, radius)
+        
+        # Progress arc
+        if self._animated_progress > 0:
+            # Get theme-based colors
+            colors = self.theme_manager.get_progress_colors()
             
-        try:
-            painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+            if self._animated_progress < 33:
+                color_str = colors['low']
+            elif self._animated_progress < 66:
+                color_str = colors['mid']
+            else:
+                color_str = colors['high']
             
-            # Calculate dimensions
-            width = self.width()
-            height = self.height()
-            center = QtCore.QPointF(width / 2, height / 2)
-            radius = min(width, height) / 2 - 4
-            
-            # Background circle
-            pen = QtGui.QPen(QtGui.QColor(255, 255, 255, 30))
+            # Parse rgba string to QColor
+            color = self._parse_rgba(color_str)
+                
+            pen = QtGui.QPen(color)
             pen.setWidth(3)
             pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
             painter.setPen(pen)
-            painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
-            painter.drawEllipse(center, radius, radius)
             
-            # Progress arc
-            if self._animated_progress > 0:
-                # Get theme-based colors
-                colors = self.theme_manager.get_progress_colors()
-                
-                if self._animated_progress < 33:
-                    color_str = colors['low']
-                elif self._animated_progress < 66:
-                    color_str = colors['mid']
-                else:
-                    color_str = colors['high']
-                
-                # Parse rgba string to QColor
-                color = self._parse_rgba(color_str)
-                    
-                pen = QtGui.QPen(color)
-                pen.setWidth(3)
-                pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
-                painter.setPen(pen)
-                
-                # Draw arc (-90 to start at top)
-                span_angle = int(self._animated_progress * 360 / 100 * 16)
-                painter.drawArc(
-                    int(center.x() - radius),
-                    int(center.y() - radius),
-                    int(radius * 2),
-                    int(radius * 2),
-                    90 * 16,  # Start at top
-                    -span_angle  # Clockwise
-                )
-                
-            # Percentage text
-            painter.setPen(QtGui.QColor(255, 255, 255, 250))
-            font = painter.font()
-            font.setPixelSize(11)
-            font.setWeight(QtGui.QFont.Weight.Bold)
-            painter.setFont(font)
-            text = f"{int(self._animated_progress)}%"
-            painter.drawText(self.rect(), QtCore.Qt.AlignmentFlag.AlignCenter, text)
-        finally:
-            painter.end()
+            # Draw arc (-90 to start at top)
+            span_angle = int(self._animated_progress * 360 / 100 * 16)
+            painter.drawArc(
+                int(center.x() - radius),
+                int(center.y() - radius),
+                int(radius * 2),
+                int(radius * 2),
+                90 * 16,  # Start at top
+                -span_angle  # Clockwise
+            )
+            
+        # Percentage text
+        painter.setPen(QtGui.QColor(255, 255, 255, 250))
+        font = painter.font()
+        font.setPixelSize(9)
+        font.setWeight(QtGui.QFont.Weight.Bold)
+        painter.setFont(font)
+        text = f"{int(self._animated_progress)}%"
+        painter.drawText(self.rect(), QtCore.Qt.AlignmentFlag.AlignCenter, text)
     
     def _parse_rgba(self, rgba_str):
         """Parse rgba string to QColor"""
@@ -129,6 +123,7 @@ class OverlayWindow(QtWidgets.QWidget):
     
     # Signals for controller communication
     drink_now_clicked = QtCore.Signal()
+    snooze_clicked = QtCore.Signal()
     position_changed = QtCore.Signal(int, int)
     close_requested = QtCore.Signal()
     settings_requested = QtCore.Signal()
@@ -243,7 +238,7 @@ class OverlayWindow(QtWidgets.QWidget):
         self.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         
         # Fixed size for overlay
-        self.setFixedSize(416, 56)
+        self.setFixedSize(416, 44)
         
         # Position at top center of screen
         screen = QtWidgets.QApplication.primaryScreen().geometry()
@@ -374,7 +369,7 @@ class OverlayWindow(QtWidgets.QWidget):
         self._bg_box = QtWidgets.QFrame(self)
         self._bg_box.setObjectName("hoverBackground")
         self._bg_box.setStyleSheet(self.theme_manager.get_overlay_stylesheet())
-        self._bg_box.setGeometry(0, 0, 416, 56)
+        self._bg_box.setGeometry(0, 0, 416, 44)
         
         # Opacity effect for background
         self._bg_opacity_effect = QtWidgets.QGraphicsOpacityEffect(self._bg_box)
@@ -392,8 +387,9 @@ class OverlayWindow(QtWidgets.QWidget):
         
         # Container layout
         layout = QtWidgets.QHBoxLayout(container)
-        layout.setContentsMargins(12, 8, 12, 8)
+        layout.setContentsMargins(12, 4, 12, 4)
         layout.setSpacing(8)
+        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignVCenter)
         
         # Circular progress widget
         self._progress_widget = CircularProgress(container, self.theme_manager)
@@ -401,7 +397,7 @@ class OverlayWindow(QtWidgets.QWidget):
         # Menu button (⋮)
         self._menu_button = QtWidgets.QToolButton(container)
         self._menu_button.setText("⋮")
-        self._menu_button.setFixedSize(32, 38)
+        self._menu_button.setFixedSize(32, 32)
         self._menu_button.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
         self._menu_button.setStyleSheet("""
             QToolButton {
@@ -435,7 +431,7 @@ class OverlayWindow(QtWidgets.QWidget):
         
         # Drink Now button (hidden initially)
         self._drink_button = QtWidgets.QPushButton("Drink Now")
-        self._drink_button.setFixedSize(100, 38)
+        self._drink_button.setFixedSize(87, 32)
         self._drink_button.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
         self._drink_button.setStyleSheet("""
             QPushButton {
@@ -470,6 +466,43 @@ class OverlayWindow(QtWidgets.QWidget):
         self._drink_button.clicked.connect(self.drink_now_clicked.emit)
         self._drink_button.setVisible(False)
         
+        # Snooze button (hidden initially)
+        self._snooze_button = QtWidgets.QPushButton("Snooze")
+        self._snooze_button.setFixedSize(69, 32)
+        self._snooze_button.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        self._snooze_button.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(255,200,100,35),
+                    stop:1 rgba(255,200,100,25)
+                );
+                color: rgba(255,255,255,250);
+                border-radius: 10px;
+                border: 1px solid rgba(255,200,100,50);
+                padding: 5px 14px;
+                font-size: 11.5px;
+                font-weight: 600;
+                font-family: 'Segoe UI Variable Display', 'Segoe UI', system-ui;
+            }
+            QPushButton:hover {
+                background: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(255,200,100,50),
+                    stop:1 rgba(255,200,100,40)
+                );
+            }
+            QPushButton:pressed {
+                background: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(255,200,100,60),
+                    stop:1 rgba(255,200,100,50)
+                );
+            }
+        """)
+        self._snooze_button.clicked.connect(self.snooze_clicked.emit)
+        self._snooze_button.setVisible(False)
+        
         # Info label (alternates between consumed and countdown on hover)
         self._info_label = QtWidgets.QLabel("0ml / 2000ml")
         self._info_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
@@ -497,7 +530,7 @@ class OverlayWindow(QtWidgets.QWidget):
         # Close button (×)
         self._close_button = QtWidgets.QToolButton(container)
         self._close_button.setText("×")
-        self._close_button.setFixedSize(32, 38)
+        self._close_button.setFixedSize(32, 32)
         self._close_button.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
         self._close_button.setStyleSheet("""
             QToolButton {
@@ -524,19 +557,18 @@ class OverlayWindow(QtWidgets.QWidget):
         layout.addWidget(self._progress_widget, 0)
         layout.addWidget(self._menu_button, 0)
         layout.addWidget(self._message_label, 1)
+        layout.addWidget(self._snooze_button, 0)
         layout.addWidget(self._drink_button, 0)
         layout.addWidget(self._info_label, 0)
         layout.addWidget(self._close_button, 0)
         
-        # Whole window opacity effect
-        self._opacity_effect = QtWidgets.QGraphicsOpacityEffect(self)
-        self.setGraphicsEffect(self._opacity_effect)
-        self._opacity_effect.setOpacity(0.65)  # Rest state
+        # Use window opacity instead of graphics effect to avoid painting conflicts
+        self.setWindowOpacity(0.65)  # Rest state
         
     def _setup_animations(self):
         """Setup smooth animations for all interactive elements"""
         # Main window fade animation
-        self._fade_anim = QtCore.QPropertyAnimation(self._opacity_effect, b"opacity", self)
+        self._fade_anim = QtCore.QPropertyAnimation(self, b"windowOpacity", self)
         self._fade_anim.setDuration(380)
         self._fade_anim.setEasingCurve(QtCore.QEasingCurve.Type.OutCubic)
         
@@ -610,7 +642,7 @@ class OverlayWindow(QtWidgets.QWidget):
     def _animate_opacity(self, target_opacity):
         """Smoothly animate window opacity"""
         self._fade_anim.stop()
-        self._fade_anim.setStartValue(self._opacity_effect.opacity())
+        self._fade_anim.setStartValue(self.windowOpacity())
         self._fade_anim.setEndValue(target_opacity)
         self._fade_anim.start()
         
@@ -898,9 +930,12 @@ class OverlayWindow(QtWidgets.QWidget):
         self._alert_mode = enabled
         
         if enabled:
-            # Alert state
-            self._message_label.setText("Time to Hydrate!")
+            # Alert state - show buttons in place of message label
+            self._message_label.setVisible(False)
+            self._info_label.setVisible(False)
+            
             self._drink_button.setVisible(True)
+            self._snooze_button.setVisible(True)
             self._animate_opacity(1.0)
             
             # Glow effect
@@ -913,9 +948,12 @@ class OverlayWindow(QtWidgets.QWidget):
             self.play_alert_sound(custom_sound_path, loop_sound)
             
         else:
-            # Rest state
+            # Rest state - restore message label
             self.stop_alert_sound()
             self._drink_button.setVisible(False)
+            self._snooze_button.setVisible(False)
+            
+            self._message_label.setVisible(True)
             self._message_label.setText(self._motivational_messages[self._current_message_index])
             
             if not self._is_hovered:
@@ -949,7 +987,7 @@ class OverlayWindow(QtWidgets.QWidget):
     def flash_success(self):
         """Brief flash effect when water is logged"""
         # Briefly go to full opacity
-        current_opacity = self._opacity_effect.opacity()
+        current_opacity = self.windowOpacity()
         self._animate_opacity(1.0)
         
         # Return to previous state after 300ms

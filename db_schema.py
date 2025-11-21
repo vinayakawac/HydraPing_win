@@ -50,6 +50,7 @@ class Database:
                 sleep_start_hour INTEGER DEFAULT 22,
                 sleep_end_hour INTEGER DEFAULT 7,
                 bedtime_warning_enabled INTEGER DEFAULT 1,
+                snooze_duration_minutes INTEGER DEFAULT 5,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         ''')
@@ -106,6 +107,9 @@ class Database:
             
             if 'bedtime_warning_enabled' not in columns:
                 cursor.execute('ALTER TABLE user_settings ADD COLUMN bedtime_warning_enabled INTEGER DEFAULT 1')
+            
+            if 'snooze_duration_minutes' not in columns:
+                cursor.execute('ALTER TABLE user_settings ADD COLUMN snooze_duration_minutes INTEGER DEFAULT 5')
         except Exception as e:
             print(f"[Database] Schema migration note: {e}")
     
@@ -171,7 +175,7 @@ class Database:
         cursor.execute('''
             SELECT daily_goal_ml, reminder_interval_minutes, chime_enabled,
                    default_sip_ml, auto_start, theme, custom_sound_path, loop_alert_sound,
-                   sleep_start_hour, sleep_end_hour, bedtime_warning_enabled
+                   sleep_start_hour, sleep_end_hour, bedtime_warning_enabled, snooze_duration_minutes
             FROM user_settings
             WHERE user_id = ?
         ''', (user_id,))
@@ -191,7 +195,8 @@ class Database:
                 'loop_alert_sound': bool(row[7]),
                 'sleep_start_hour': row[8],
                 'sleep_end_hour': row[9],
-                'bedtime_warning_enabled': bool(row[10])
+                'bedtime_warning_enabled': bool(row[10]),
+                'snooze_duration_minutes': row[11]
             }
         return None
     

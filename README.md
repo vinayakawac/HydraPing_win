@@ -12,7 +12,7 @@ Always-on-top glassmorphic overlay perfect for any workflow:
 - **Auto-hide on sleep** - respects your sleep schedule
 - **Theme-aware** - 6 beautiful glassmorphic themes
 - **Performance optimized** - minimal CPU/memory footprint
-- **Perfect for work and study**
+- **Perfect for work or study**
 
 ## Features
 
@@ -20,7 +20,7 @@ Always-on-top glassmorphic overlay perfect for any workflow:
 - **High Performance** - Optimized dual-timer system with smart caching
 - **Smart Reminders** - Customizable intervals with sleep mode
 - **Progress Tracking** - Circular progress ring with live updates
-- **55 Motivational Messages** - Rotating inspirational quotes
+- **Motivational Messages** - Rotating inspirational quotes
 - **Confetti Celebration** - Visual celebration on goal achievement
 - **Custom Sound Alerts** - Use your own audio files (WAV/MP3/OGG/FLAC)
 - **Sleep Hours** - Auto-pause reminders during your sleep schedule
@@ -238,7 +238,3 @@ For issues or questions, please create an issue in the project repository.
 **Made with Python**
 
 Stay hydrated!
-
-Download [here](https://github.com/oFive-0s/HydraPing/releases)
-
-

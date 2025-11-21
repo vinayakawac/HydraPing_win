@@ -43,6 +43,7 @@ class HydraPingController(QtCore.QObject):
         
         # Connect overlay signals to handlers
         self._overlay.drink_now_clicked.connect(self._handle_drink_now)
+        self._overlay.snooze_clicked.connect(self._handle_snooze)
         self._overlay.position_changed.connect(self._persist_overlay_position)
         self._overlay.close_requested.connect(self._handle_overlay_close)
         self._overlay.settings_requested.connect(self.open_settings)
@@ -63,6 +64,8 @@ class HydraPingController(QtCore.QObject):
         self.last_date = datetime.now().date()
         self._in_sleep_hours = False
         self._bedtime_warning_shown = False
+        self._is_snoozed = False
+        self._snooze_end_time = 0
         
         # Tray removed
         
@@ -77,23 +80,37 @@ class HydraPingController(QtCore.QObject):
     def _update_countdown(self):
         """Fast timer: Update countdown display every second"""
         if not self.paused and not self._in_sleep_hours:
-            interval = self.settings.get('reminder_interval_minutes', 45)
-            elapsed_seconds = time.time() - self.last_reminder_time
-            remaining_seconds = int((interval * 60) - elapsed_seconds)
-            
-            # Check if time to trigger alert
-            if remaining_seconds <= 0:
-                self._trigger_alert()
-                self.last_reminder_time = time.time()
-                remaining_seconds = interval * 60
-            
-            # Update display
-            if remaining_seconds > 0:
-                mins = remaining_seconds // 60
-                secs = remaining_seconds % 60
-                self._overlay.update_countdown(f"Next: {mins:02d}:{secs:02d}")
+            # Check if snoozed
+            if self._is_snoozed:
+                snooze_remaining = int(self._snooze_end_time - time.time())
+                if snooze_remaining <= 0:
+                    # Snooze ended, trigger alert
+                    self._is_snoozed = False
+                    self._trigger_alert()
+                    self.last_reminder_time = time.time()
+                else:
+                    # Show snooze countdown
+                    mins = snooze_remaining // 60
+                    secs = snooze_remaining % 60
+                    self._overlay.update_countdown(f"Snoozed: {mins:02d}:{secs:02d}")
             else:
-                self._overlay.update_countdown("Next: 00:00")
+                interval = self.settings.get('reminder_interval_minutes', 45)
+                elapsed_seconds = time.time() - self.last_reminder_time
+                remaining_seconds = int((interval * 60) - elapsed_seconds)
+                
+                # Check if time to trigger alert
+                if remaining_seconds <= 0:
+                    self._trigger_alert()
+                    self.last_reminder_time = time.time()
+                    remaining_seconds = interval * 60
+                
+                # Update display
+                if remaining_seconds > 0:
+                    mins = remaining_seconds // 60
+                    secs = remaining_seconds % 60
+                    self._overlay.update_countdown(f"Next: {mins:02d}:{secs:02d}")
+                else:
+                    self._overlay.update_countdown("Next: 00:00")
         elif self._in_sleep_hours:
             self._overlay.update_countdown("Sleep Mode")
     
@@ -143,13 +160,23 @@ class HydraPingController(QtCore.QObject):
         default_amount = self.settings.get('default_sip_ml', 250)
         self._log_water(default_amount)
         self._overlay.set_alert_mode(False)
+        self._is_snoozed = False
         self.last_reminder_time = time.time()
+        
+    def _handle_snooze(self):
+        """Handle snooze button click"""
+        snooze_minutes = self.settings.get('snooze_duration_minutes', 5)
+        self._is_snoozed = True
+        self._snooze_end_time = time.time() + (snooze_minutes * 60)
+        self._overlay.set_alert_mode(False)
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Snoozed for {snooze_minutes} minutes")
         
     def _handle_manual_drink(self, amount):
         """Handle manual drink logging from menu"""
         self._log_water(amount)
         if self._overlay._alert_mode:
             self._overlay.set_alert_mode(False)
+            self._is_snoozed = False
             self.last_reminder_time = time.time()
             
     def _log_water(self, amount):
@@ -163,8 +190,7 @@ class HydraPingController(QtCore.QObject):
         
         # Check if goal achieved (trigger confetti only on first time reaching goal)
         if was_below_goal and self.today_intake >= self.settings['daily_goal_ml']:
-            self._show_goal_achieved()
-            self._overlay.celebrate_goal()  # Trigger confetti animation
+            self._overlay.celebrate_goal()  # Trigger confetti animation only
             
         # Dashboard removed; no additional UI to refresh
     
@@ -244,6 +270,7 @@ class HydraPingController(QtCore.QObject):
         try:
             dialog = SettingsDialog(self.data_manager, parent=self._overlay)
             dialog.settings_updated.connect(self._apply_settings)
+            dialog.water_reset.connect(self._handle_water_reset)
             if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
                 # Settings were saved
                 self.settings = self.data_manager.get_settings()
@@ -261,6 +288,13 @@ class HydraPingController(QtCore.QObject):
             self._overlay.show()
             self.overlay_is_visible = True
             
+    
+    @QtCore.Slot()
+    def _handle_water_reset(self):
+        """Handle water reset from settings dialog"""
+        self.today_intake = 0
+        self._overlay.update_consumption(self.today_intake, self.settings['daily_goal_ml'])
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Manual reset: Water intake reset to 0 ml")
     
     @QtCore.Slot(dict)
     def _apply_settings(self, updated_settings):
