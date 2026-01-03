@@ -186,8 +186,13 @@ class SettingsDialog(QtWidgets.QDialog):
             }
         """)
         form_layout.addRow("Theme:", self.theme_combo)
-        
-        # Auto-launch checkbox
+                # Window Shape Selection
+        self.shape_combo = QtWidgets.QComboBox()
+        self.shape_combo.addItems(['Rectangular', 'Circular'])
+        self.shape_combo.setMinimumWidth(150)
+        self.shape_combo.setStyleSheet(self.theme_combo.styleSheet())
+        form_layout.addRow("Window Shape:", self.shape_combo)
+                # Auto-launch checkbox
         self.auto_launch_check = QtWidgets.QCheckBox("Launch on system startup")
         self.auto_launch_check.setStyleSheet("""
             QCheckBox {
@@ -587,6 +592,10 @@ class SettingsDialog(QtWidgets.QDialog):
         self.sleep_end_spin.setValue(self.settings.get('sleep_end_hour', 7))
         self.bedtime_warning_check.setChecked(self.settings.get('bedtime_warning_enabled', True))
         
+        # Load window shape setting
+        window_shape = self.settings.get('window_shape', 'rectangular')
+        self.shape_combo.setCurrentText('Rectangular' if window_shape == 'rectangular' else 'Circular')
+        
     def _save_settings(self):
         """Save settings and close dialog"""
         # Get values
@@ -606,6 +615,7 @@ class SettingsDialog(QtWidgets.QDialog):
         sleep_start = self.sleep_start_spin.value()
         sleep_end = self.sleep_end_spin.value()
         bedtime_warning = self.bedtime_warning_check.isChecked()
+        window_shape = 'rectangular' if self.shape_combo.currentText() == 'Rectangular' else 'circular'
         
         # Update via data_manager
         self.data_manager.update_settings(
@@ -619,7 +629,8 @@ class SettingsDialog(QtWidgets.QDialog):
             loop_alert_sound=loop_enabled,
             sleep_start_hour=sleep_start,
             sleep_end_hour=sleep_end,
-            bedtime_warning_enabled=bedtime_warning
+            bedtime_warning_enabled=bedtime_warning,
+            window_shape=window_shape
         )
         
         # Handle auto-launch
@@ -646,7 +657,8 @@ class SettingsDialog(QtWidgets.QDialog):
             'loop_alert_sound': loop_enabled,
             'sleep_start_hour': sleep_start,
             'sleep_end_hour': sleep_end,
-            'bedtime_warning_enabled': bedtime_warning
+            'bedtime_warning_enabled': bedtime_warning,
+            'window_shape': window_shape
         }
         self.settings_updated.emit(updated_settings)
         
@@ -674,6 +686,7 @@ class SettingsDialog(QtWidgets.QDialog):
             self.sleep_start_spin.setValue(22)
             self.sleep_end_spin.setValue(7)
             self.bedtime_warning_check.setChecked(True)
+            self.shape_combo.setCurrentText('Rectangular')
     
     def _reset_water(self):
         """Reset today's water consumption to zero"""

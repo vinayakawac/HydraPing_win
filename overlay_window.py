@@ -8,6 +8,7 @@ import os
 from PySide6 import QtCore, QtWidgets, QtGui
 from theme_manager import ThemeManager
 from confetti_widget import ConfettiWidget
+from layouts import RectangularLayout, CircularLayout
 
 
 class CircularProgress(QtWidgets.QWidget):
@@ -59,9 +60,12 @@ class CircularProgress(QtWidgets.QWidget):
         center = QtCore.QPointF(width / 2, height / 2)
         radius = min(width, height) / 2 - 3
         
+        # Scale pen width based on size
+        pen_width = max(3, int(min(width, height) / 20))
+        
         # Background circle
         pen = QtGui.QPen(QtGui.QColor(255, 255, 255, 30))
-        pen.setWidth(3)
+        pen.setWidth(pen_width)
         pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
         painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
@@ -83,7 +87,7 @@ class CircularProgress(QtWidgets.QWidget):
             color = self._parse_rgba(color_str)
                 
             pen = QtGui.QPen(color)
-            pen.setWidth(3)
+            pen.setWidth(pen_width)
             pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
             painter.setPen(pen)
             
@@ -101,7 +105,9 @@ class CircularProgress(QtWidgets.QWidget):
         # Percentage text
         painter.setPen(QtGui.QColor(255, 255, 255, 250))
         font = painter.font()
-        font.setPixelSize(9)
+        # Scale font size based on widget size
+        font_size = max(9, int(min(width, height) / 5))
+        font.setPixelSize(font_size)
         font.setWeight(QtGui.QFont.Weight.Bold)
         painter.setFont(font)
         text = f"{int(self._animated_progress)}%"
@@ -134,6 +140,11 @@ class OverlayWindow(QtWidgets.QWidget):
         
         # Theme manager
         self.theme_manager = ThemeManager(theme_name)
+        
+        # Window shape setting and layout manager
+        self._window_shape = 'rectangular'  # 'rectangular' or 'circular'
+        self._saved_shape = 'rectangular'  # User's preferred shape (for auto-revert)
+        self._layout_manager = RectangularLayout(self)
         
         # State management
         self._drag_active = False
@@ -237,14 +248,11 @@ class OverlayWindow(QtWidgets.QWidget):
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         
-        # Fixed size for overlay
-        self.setFixedSize(416, 44)
+        # Fixed size for overlay (will be updated based on shape)
+        self._apply_window_shape()
         
         # Position at top center of screen
-        screen = QtWidgets.QApplication.primaryScreen().geometry()
-        x = (screen.width() - 416) // 2
-        y = 20
-        self.move(x, y)
+        self._position_window()
     
     def _setup_background_detection(self):
         """Setup timer for background brightness detection"""
@@ -359,7 +367,7 @@ class OverlayWindow(QtWidgets.QWidget):
             self._progress_widget.update()
         
     def _create_ui(self):
-        """Create glassmorphic UI components"""
+        """Create glassmorphic UI components using layout manager"""
         # Main layout
         main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -369,7 +377,8 @@ class OverlayWindow(QtWidgets.QWidget):
         self._bg_box = QtWidgets.QFrame(self)
         self._bg_box.setObjectName("hoverBackground")
         self._bg_box.setStyleSheet(self.theme_manager.get_overlay_stylesheet())
-        self._bg_box.setGeometry(0, 0, 416, 44)
+        # Geometry will be set based on window shape
+        self._update_bg_box_geometry()
         
         # Opacity effect for background
         self._bg_opacity_effect = QtWidgets.QGraphicsOpacityEffect(self._bg_box)
@@ -382,24 +391,47 @@ class OverlayWindow(QtWidgets.QWidget):
         container.setStyleSheet(self.theme_manager.get_overlay_stylesheet())
         container.installEventFilter(self)
         main_layout.addWidget(container)
-        # Keep a reference for theme updates
         self._container = container
         
-        # Container layout
-        layout = QtWidgets.QHBoxLayout(container)
-        layout.setContentsMargins(12, 4, 12, 4)
-        layout.setSpacing(8)
-        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignVCenter)
+        # Create layout using layout manager
+        layout = self._layout_manager.create_container_layout(container)
+        self._container_layout = layout
+        
+        # Create widgets
+        widgets = self._create_widgets(container)
+        
+        # Set progress widget size based on layout
+        prog_size = self._layout_manager.get_progress_widget_size()
+        widgets['progress'].setFixedSize(*prog_size)
+        
+        # Add widgets to layout using layout manager
+        self._layout_manager.add_widgets_to_layout(layout, widgets)
+        
+        # Store widget references
+        self._progress_widget = widgets['progress']
+        self._menu_button = widgets['menu']
+        self._message_label = widgets['message']
+        self._drink_button = widgets['drink']
+        self._snooze_button = widgets['snooze']
+        self._info_label = widgets['info']
+        self._close_button = widgets['close']
+        
+        # Use window opacity instead of graphics effect to avoid painting conflicts
+        self.setWindowOpacity(0.65)  # Rest state
+    
+    def _create_widgets(self, container):
+        """Create all UI widgets and return as dictionary"""
+        widgets = {}
         
         # Circular progress widget
-        self._progress_widget = CircularProgress(container, self.theme_manager)
+        widgets['progress'] = CircularProgress(container, self.theme_manager)
         
         # Menu button (⋮)
-        self._menu_button = QtWidgets.QToolButton(container)
-        self._menu_button.setText("⋮")
-        self._menu_button.setFixedSize(32, 32)
-        self._menu_button.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
-        self._menu_button.setStyleSheet("""
+        widgets['menu'] = QtWidgets.QToolButton(container)
+        widgets['menu'].setText("⋮")
+        widgets['menu'].setFixedSize(32, 32)
+        widgets['menu'].setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        widgets['menu'].setStyleSheet("""
             QToolButton {
                 background: rgba(255,255,255,8);
                 color: rgba(255,255,255,180);
@@ -413,12 +445,12 @@ class OverlayWindow(QtWidgets.QWidget):
                 color: rgba(255,255,255,250);
             }
         """)
-        self._menu_button.clicked.connect(self._show_menu)
+        widgets['menu'].clicked.connect(self._show_menu)
         
         # Message label (rotating motivational messages)
-        self._message_label = QtWidgets.QLabel(self._motivational_messages[0])
-        self._message_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self._message_label.setStyleSheet("""
+        widgets['message'] = QtWidgets.QLabel(self._motivational_messages[0])
+        widgets['message'].setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        widgets['message'].setStyleSheet("""
             QLabel {
                 color: rgba(255,255,255,250);
                 font-size: 12px;
@@ -430,10 +462,10 @@ class OverlayWindow(QtWidgets.QWidget):
         """)
         
         # Drink Now button (hidden initially)
-        self._drink_button = QtWidgets.QPushButton("Drink Now")
-        self._drink_button.setFixedSize(87, 32)
-        self._drink_button.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
-        self._drink_button.setStyleSheet("""
+        widgets['drink'] = QtWidgets.QPushButton("Drink Now")
+        widgets['drink'].setFixedSize(87, 32)
+        widgets['drink'].setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        widgets['drink'].setStyleSheet("""
             QPushButton {
                 background: qlineargradient(
                     x1:0, y1:0, x2:0, y2:1,
@@ -463,14 +495,14 @@ class OverlayWindow(QtWidgets.QWidget):
                 );
             }
         """)
-        self._drink_button.clicked.connect(self.drink_now_clicked.emit)
-        self._drink_button.setVisible(False)
+        widgets['drink'].clicked.connect(self.drink_now_clicked.emit)
+        widgets['drink'].setVisible(False)
         
         # Snooze button (hidden initially)
-        self._snooze_button = QtWidgets.QPushButton("Snooze")
-        self._snooze_button.setFixedSize(69, 32)
-        self._snooze_button.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
-        self._snooze_button.setStyleSheet("""
+        widgets['snooze'] = QtWidgets.QPushButton("Snooze")
+        widgets['snooze'].setFixedSize(69, 32)
+        widgets['snooze'].setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        widgets['snooze'].setStyleSheet("""
             QPushButton {
                 background: qlineargradient(
                     x1:0, y1:0, x2:0, y2:1,
@@ -500,14 +532,14 @@ class OverlayWindow(QtWidgets.QWidget):
                 );
             }
         """)
-        self._snooze_button.clicked.connect(self.snooze_clicked.emit)
-        self._snooze_button.setVisible(False)
+        widgets['snooze'].clicked.connect(self.snooze_clicked.emit)
+        widgets['snooze'].setVisible(False)
         
         # Info label (alternates between consumed and countdown on hover)
-        self._info_label = QtWidgets.QLabel("0ml / 2000ml")
-        self._info_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
-        self._info_label.setFixedWidth(110)  # Fixed width to prevent layout shifts
-        self._info_label.setStyleSheet("""
+        widgets['info'] = QtWidgets.QLabel("0ml / 2000ml")
+        widgets['info'].setAlignment(QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
+        widgets['info'].setFixedWidth(110)
+        widgets['info'].setStyleSheet("""
             QLabel {
                 color: rgba(255,255,255,250);
                 font-size: 11px;
@@ -519,20 +551,18 @@ class OverlayWindow(QtWidgets.QWidget):
                 padding: 2px 4px;
             }
         """)
-        self._info_label.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        
-        # No opacity effect - just show/hide directly
-        self._info_label.setVisible(False)  # Start hidden
+        widgets['info'].setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        widgets['info'].setVisible(False)
         
         # Store countdown text for alternating display
         self._countdown_text = "Next: --:--"
         
         # Close button (×)
-        self._close_button = QtWidgets.QToolButton(container)
-        self._close_button.setText("×")
-        self._close_button.setFixedSize(32, 32)
-        self._close_button.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
-        self._close_button.setStyleSheet("""
+        widgets['close'] = QtWidgets.QToolButton(container)
+        widgets['close'].setText("×")
+        widgets['close'].setFixedSize(32, 32)
+        widgets['close'].setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        widgets['close'].setStyleSheet("""
             QToolButton {
                 background: rgba(255,100,100,15);
                 color: rgba(255,255,255,180);
@@ -546,24 +576,20 @@ class OverlayWindow(QtWidgets.QWidget):
                 color: rgba(255,255,255,250);
             }
         """)
-        self._close_button.clicked.connect(self.close_requested.emit)
+        widgets['close'].clicked.connect(self.close_requested.emit)
         
         # Opacity effect for close button
-        self._close_opacity_effect = QtWidgets.QGraphicsOpacityEffect(self._close_button)
+        self._close_opacity_effect = QtWidgets.QGraphicsOpacityEffect(widgets['close'])
         self._close_opacity_effect.setOpacity(0.0)
-        self._close_button.setGraphicsEffect(self._close_opacity_effect)
+        widgets['close'].setGraphicsEffect(self._close_opacity_effect)
         
-        # Add widgets to layout
-        layout.addWidget(self._progress_widget, 0)
-        layout.addWidget(self._menu_button, 0)
-        layout.addWidget(self._message_label, 1)
-        layout.addWidget(self._snooze_button, 0)
-        layout.addWidget(self._drink_button, 0)
-        layout.addWidget(self._info_label, 0)
-        layout.addWidget(self._close_button, 0)
-        
-        # Use window opacity instead of graphics effect to avoid painting conflicts
-        self.setWindowOpacity(0.65)  # Rest state
+        return widgets
+    
+    def _update_bg_box_geometry(self):
+        """Update background box geometry based on current window shape"""
+        if hasattr(self, '_bg_box'):
+            x, y, w, h = self._layout_manager.get_bg_box_geometry()
+            self._bg_box.setGeometry(x, y, w, h)
         
     def _setup_animations(self):
         """Setup smooth animations for all interactive elements"""
@@ -832,6 +858,7 @@ class OverlayWindow(QtWidgets.QWidget):
     def mousePressEvent(self, event):
         """Handle mouse press for drag-to-move"""
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            # Normal drag behavior
             self._drag_active = True
             self._drag_offset = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             
@@ -845,6 +872,12 @@ class OverlayWindow(QtWidgets.QWidget):
         if self._drag_active:
             self._drag_active = False
             self.position_changed.emit(self.x(), self.y())
+    
+    def mouseDoubleClickEvent(self, event):
+        """Handle double-click to open settings (especially for circular mode)"""
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            # Double-click opens settings
+            self.settings_requested.emit()
             
     def play_alert_sound(self, custom_sound_path=None, loop=False):
         """Play alert sound - custom file or default system beep"""
@@ -930,12 +963,19 @@ class OverlayWindow(QtWidgets.QWidget):
         self._alert_mode = enabled
         
         if enabled:
-            # Alert state - show buttons in place of message label
+            # If in circular mode, temporarily switch to rectangular for alert
+            if self._saved_shape == 'circular':
+                self.set_window_shape('rectangular', save_preference=False)
+            
+            # Alert state
             self._message_label.setVisible(False)
             self._info_label.setVisible(False)
             
-            self._drink_button.setVisible(True)
-            self._snooze_button.setVisible(True)
+            # Show buttons based on layout
+            if self._layout_manager.should_show_buttons_in_alert():
+                self._drink_button.setVisible(True)
+                self._snooze_button.setVisible(True)
+            
             self._animate_opacity(1.0)
             
             # Glow effect
@@ -953,8 +993,14 @@ class OverlayWindow(QtWidgets.QWidget):
             self._drink_button.setVisible(False)
             self._snooze_button.setVisible(False)
             
-            self._message_label.setVisible(True)
-            self._message_label.setText(self._motivational_messages[self._current_message_index])
+            # Revert back to saved shape after alert
+            if self._saved_shape == 'circular' and self._window_shape != 'circular':
+                self.set_window_shape('circular', save_preference=False)
+            
+            # Show message label based on layout
+            if self._layout_manager.should_show_message_label():
+                self._message_label.setVisible(True)
+                self._message_label.setText(self._motivational_messages[self._current_message_index])
             
             if not self._is_hovered:
                 self._animate_opacity(0.65)
@@ -1009,3 +1055,58 @@ class OverlayWindow(QtWidgets.QWidget):
         # Update progress widget theme
         self._progress_widget.theme_manager = self.theme_manager
         self._progress_widget.update()
+    
+    def set_window_shape(self, shape, save_preference=True):
+        """Change window shape between rectangular and circular"""
+        if shape in ['rectangular', 'circular'] and shape != self._window_shape:
+            self._window_shape = shape
+            
+            # Save user preference (unless it's a temporary switch)
+            if save_preference:
+                self._saved_shape = shape
+            
+            # Update layout manager
+            if shape == 'circular':
+                self._layout_manager = CircularLayout(self)
+            else:
+                self._layout_manager = RectangularLayout(self)
+            
+            self._apply_window_shape()
+            self._update_bg_box_geometry()
+            self._position_window()
+            
+            # Update layout and widget visibility based on shape
+            if hasattr(self, '_message_label') and hasattr(self, '_info_label'):
+                if self._layout_manager.should_show_message_label():
+                    if not self._alert_mode:
+                        self._message_label.setVisible(True)
+                else:
+                    self._message_label.setVisible(False)
+                
+                # Always hide info label initially
+                self._info_label.setVisible(False)
+                
+                # Update progress widget size
+                if hasattr(self, '_progress_widget'):
+                    prog_size = self._layout_manager.get_progress_widget_size()
+                    self._progress_widget.setFixedSize(*prog_size)
+    
+    def _apply_window_shape(self):
+        """Apply the current window shape (rectangular or circular)"""
+        # Get window size from layout manager
+        width, height = self._layout_manager.get_window_size()
+        self.setFixedSize(width, height)
+        
+        # Apply window mask if needed
+        mask = self._layout_manager.get_window_mask(width, height)
+        if mask:
+            self.setMask(mask)
+        else:
+            self.clearMask()
+    
+    def _position_window(self):
+        """Position window at top center of screen"""
+        screen = QtWidgets.QApplication.primaryScreen().geometry()
+        x = (screen.width() - self.width()) // 2
+        y = 20
+        self.move(x, y)

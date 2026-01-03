@@ -37,6 +37,11 @@ class HydraPingController(QtCore.QObject):
         overlay_x = self.settings.get('overlay_x')
         overlay_y = self.settings.get('overlay_y', 20)
         self._overlay = OverlayWindow(theme_name=theme)
+        
+        # Apply window shape from settings
+        window_shape = self.settings.get('window_shape', 'rectangular')
+        self._overlay.set_window_shape(window_shape, save_preference=True)
+        
         if overlay_x is not None:
             self._overlay.move(overlay_x, overlay_y)
         self._overlay.update_consumption(self.today_intake, self.settings['daily_goal_ml'])
@@ -305,6 +310,10 @@ class HydraPingController(QtCore.QObject):
         # Update theme if changed
         new_theme = updated_settings.get('theme', 'Dark Glassmorphic')
         self._overlay.set_theme(new_theme)
+        
+        # Update window shape if changed
+        new_shape = updated_settings.get('window_shape', 'rectangular')
+        self._overlay.set_window_shape(new_shape, save_preference=True)
         
         if not self.paused:
             self.last_reminder_time = time.time()  # Reset reminder timer with new interval

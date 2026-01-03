@@ -110,6 +110,9 @@ class Database:
             
             if 'snooze_duration_minutes' not in columns:
                 cursor.execute('ALTER TABLE user_settings ADD COLUMN snooze_duration_minutes INTEGER DEFAULT 5')
+            
+            if 'window_shape' not in columns:
+                cursor.execute("ALTER TABLE user_settings ADD COLUMN window_shape TEXT DEFAULT 'rectangular'")
         except Exception as e:
             print(f"[Database] Schema migration note: {e}")
     
