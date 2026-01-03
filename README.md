@@ -2,21 +2,38 @@
 
 A minimalist, high-performance hydration tracking companion built with Python and PySide6.
 
-## Overlay Mode
+## Overlay Modes
 
-Always-on-top glassmorphic overlay perfect for any workflow:
+Always-on-top glassmorphic overlay perfect for any workflow with **two display modes**:
 
-- **Always visible** floating bar with smooth animations
+### Normal Mode (Rectangular)
+- **Full-featured bar** with all controls and information
 - **Quick water logging** (100ml, 200ml, 250ml, 500ml, custom)
+- **Progress tracking** with circular ring and percentage
+- **Motivational messages** that rotate every 5 seconds
+- **Info display** showing consumed/goal on hover
 - **Draggable** - position anywhere on screen
+
+### Minimal Mode (Circular)
+- **Ultra-minimal 44x44px circle** for distraction-free work
+- **Only progress wheel** visible - perfect for deep focus
+- **Auto-switches to Normal** during alerts
+- **Double-click** to access settings
+- **Smooth circular border** with anti-aliasing
+- **Perfectly centered** progress ring
+
+**Common Features:**
 - **Auto-hide on sleep** - respects your sleep schedule
 - **Theme-aware** - 6 beautiful glassmorphic themes
 - **Performance optimized** - minimal CPU/memory footprint
+- **Adaptive borders** - smooth rendering for any shape
 - **Perfect for work or study**
 
 ## Features
 
+- **Dual Display Modes** - Switch between Normal (full bar) and Minimal (44px circle)
 - **Modern Glass-morphism UI** - Beautiful, elegant interface with smooth animations
+- **Configuration-Based Layouts** - Flexible layout system for easy customization
 - **High Performance** - Optimized dual-timer system with smart caching
 - **Smart Reminders** - Customizable intervals with sleep mode
 - **Progress Tracking** - Circular progress ring with live updates
@@ -83,6 +100,7 @@ The application starts directly in **Overlay Mode** - a minimalist always-on-top
 - Default sip size: 50-1000ml
 - Sleep hours: Configure start/end times
 - Theme: Choose from 6 glassmorphic themes
+- **Window Shape**: Toggle between Normal and Minimal modes
 - Custom sounds: Browse for WAV/MP3/OGG/FLAC files
 - Sound loop: Enable continuous alert until acknowledged
 - Auto-launch: Start with Windows
@@ -90,9 +108,10 @@ The application starts directly in **Overlay Mode** - a minimalist always-on-top
 
 **Overlay Controls:**
 - **Drag** anywhere on the bar to reposition
+- **Double-click** to open settings (especially useful in Minimal mode)
 - **Menu (⋮)** - Access drink presets and settings
-- **Close (×)** - Exit application (appears on hover)
-- **Hover** - Reveals additional info and controls
+- **Hover** - Reveals additional info and controls (Normal mode only)
+- **Settings button** in dialog to close application
 
 **Quick Presets:**
 - Light Activity: 2000ml daily goal
@@ -114,6 +133,13 @@ HydraPing/
 ├── confetti_widget.py          # Goal celebration animation
 ├── db_schema.py                # Database schema & migrations
 ├── icon_helper.py              # Icon utilities
+├── layouts/
+│   ├── __init__.py             # Layout exports
+│   ├── layout_config.py        # Configuration-based layout system
+│   ├── layout_manager.py       # Layout application & management
+│   ├── base_layout.py          # Base layout class (legacy)
+│   ├── normal_layout.py        # Normal mode layout (legacy)
+│   └── minimal_layout.py       # Minimal mode layout (legacy)
 ├── core/
 │   ├── data_manager.py         # High-level data API with caching
 │   ├── config.py               # Application configuration
@@ -129,20 +155,24 @@ HydraPing/
 
 The application uses SQLite with automatic schema migrations:
 
-- **users** - User accounts with hashed passwords (SHA-256)
-- **user_settings** - User preferences with 11 configurable fields
+- **user_settings** - Application settings (single row with id=1)
 - **hydration_logs** - Water intake records with automatic cleanup (90-day retention)
+
+The database automatically migrates from old multi-user schema if detected.
 
 ## Architecture
 
 ### Performance Features
 
 - **Dual-Timer System**: 1-second timer for countdown, 60-second timer for system checks
+- **Configuration-Based Layouts**: Data-driven layout system for flexibility and maintainability
 - **Settings Cache**: 5-second TTL cache reduces database queries by 95%
 - **Stylesheet Cache**: Theme stylesheets cached per theme, regenerated only on change
 - **Animation Pooling**: Reusable animation instances prevent conflicts
 - **Sound Timer Reuse**: Single timer instance for alert sound loops
 - **Event Consolidation**: Unified hover handling reduces code duplication
+- **Smooth Rendering**: Anti-aliased borders with floating-point precision
+- **Adaptive Layouts**: Auto-switching between modes during alerts
 
 ### Optimization Results
 
@@ -185,7 +215,13 @@ pip install --upgrade PySide6
 ### Overlay not visible
 - Check if hidden behind fullscreen applications
 - Try dragging from last known position
+- Use double-click to open settings and adjust position
 - Restart application to reset position
+
+### Minimal mode issues
+- Progress wheel not centered: Fixed with AlignCenter layout
+- Borders not smooth: Using anti-aliasing and floating-point rendering
+- Layout not switching: Check window_shape in database settings
 
 ### Database errors
 - Delete `hydra_ping.db` to reset

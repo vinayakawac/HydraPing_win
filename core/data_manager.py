@@ -1,11 +1,11 @@
 """
 Data Manager for HydraPing.
 High-level API that encapsulates all data operations including:
-- User management
 - Settings persistence
 - Hydration logging
 - Analytics
 - Log rotation
+Simplified single-user version.
 """
 
 from datetime import datetime, timedelta
@@ -25,15 +25,15 @@ class DataManager:
     """
     Centralized data management layer.
     Provides clean API for all persistence operations.
+    Single-user simplified version.
     """
     
-    def __init__(self, user=None):
+    def __init__(self):
         """Initialize data manager with database in user config directory."""
         db_path = get_database_path()
         print(f"[DataManager] Using database: {db_path}")
         
         self.db = Database(str(db_path))
-        self.user = user
         self._settings_cache = None
         self._cache_timestamp = 0
         self._cache_ttl = 5  # Cache settings for 5 seconds
@@ -65,68 +65,18 @@ class DataManager:
         except Exception as e:
             print(f"[DataManager] Log rotation error: {e}")
     
-    def get_or_create_default_user(self):
-        """
-        Get or create default user for standalone app.
-        Returns user dict with id and email.
-        """
-        try:
-            success, result = self.db.authenticate_user('default@hydra.local', 'default123')
-            if success:
-                return result
-        except:
-            pass
-        
-        try:
-            success, user_id = self.db.create_user('default@hydra.local', 'default123')
-            if success:
-                return {'id': user_id, 'email': 'default@hydra.local'}
-        except:
-            pass
-        
-        conn = self.db.get_connection()
-        cursor = conn.cursor()
-        cursor.execute('SELECT id, email FROM users LIMIT 1')
-        user = cursor.fetchone()
-        conn.close()
-        
-        if user:
-            return {'id': user[0], 'email': user[1]}
-        
-        timestamp = int(datetime.now().timestamp())
-        success, user_id = self.db.create_user(f'user{timestamp}@hydra.local', 'default')
-        if success:
-            return {'id': user_id, 'email': f'user{timestamp}@hydra.local'}
-        
-        raise Exception("Failed to create or retrieve user")
-    
-    def create_user(self, email, password):
-        """Create new user account."""
-        return self.db.create_user(email, password)
-    
-    def authenticate_user(self, email, password):
-        """Authenticate user credentials."""
-        return self.db.authenticate_user(email, password)
-    
-    def set_user(self, user):
-        """Set the current user context."""
-        self.user = user
-    
     def get_settings(self):
         """
         Get user settings with defaults.
         Returns dict with all settings.
         """
-        if not self.user:
-            raise ValueError("No user context set. Call set_user() first.")
-        
         # Check cache first
         import time
         current_time = time.time()
         if self._settings_cache and (current_time - self._cache_timestamp) < self._cache_ttl:
             return self._settings_cache.copy()
         
-        settings = self.db.get_user_settings(self.user['id'])
+        settings = self.db.get_user_settings()
         
         if settings is None:
             settings = {
@@ -135,11 +85,11 @@ class DataManager:
                 'chime_enabled': True,
                 'default_sip_ml': DEFAULT_DRINK_AMOUNT,
                 'auto_start': False,
-                'theme': DEFAULT_THEME
+                'theme': DEFAULT_THEME,
+                'window_shape': 'rectangular'
             }
         
         # Update cache
-        import time
         self._settings_cache = settings.copy()
         self._cache_timestamp = time.time()
         
@@ -149,12 +99,9 @@ class DataManager:
         """
         Update user settings.
         Accepts: daily_goal_ml, reminder_interval_minutes, chime_enabled,
-                default_sip_ml, auto_start, theme
+                default_sip_ml, auto_start, theme, window_shape, etc.
         """
-        if not self.user:
-            raise ValueError("No user context set. Call set_user() first.")
-        
-        self.db.update_user_settings(self.user['id'], **kwargs)
+        self.db.update_user_settings(**kwargs)
         
         # Invalidate cache
         self._settings_cache = None
@@ -171,92 +118,35 @@ class DataManager:
     
     def log_water(self, amount_ml):
         """Log water intake."""
-        if not self.user:
-            raise ValueError("No user context set. Call set_user() first.")
-        self.db.log_water_intake(self.user['id'], amount_ml)
+        self.db.log_water_intake(amount_ml)
     
     def get_today_total(self):
         """Get total water intake for today."""
-        if not self.user:
-            raise ValueError("No user context set. Call set_user() first.")
-        return self.db.get_today_intake(self.user['id'])
+        return self.db.get_today_intake()
     
     def get_recent_logs(self, limit=50):
         """Get recent hydration logs."""
-        if not self.user:
-            raise ValueError("No user context set. Call set_user() first.")
-        return self.db.get_recent_logs(self.user['id'], limit=limit)
+        return self.db.get_recent_logs(limit)
     
     def delete_log(self, log_id):
         """Delete a specific log entry."""
         self.db.delete_log_entry(log_id)
     
     def reset_today(self):
-        """Reset today's intake."""
-        if not self.user:
-            raise ValueError("No user context set. Call set_user() first.")
-        return self.db.reset_today_intake(self.user['id'])
+        """Reset today's water intake."""
+        deleted = self.db.reset_today_intake()
+        return deleted
     
     def get_daily_stats(self, days=7):
         """Get daily intake stats for the last N days."""
-        if not self.user:
-            raise ValueError("No user context set. Call set_user() first.")
-        return self.db.get_daily_stats(self.user['id'], days=days)
-    
-    def get_weekly_stats(self):
-        """Get weekly hydration statistics."""
-        if not self.user:
-            raise ValueError("No user context set. Call set_user() first.")
-        return self.db.get_weekly_stats(self.user['id'])
-    
-    def get_hourly_distribution(self, days=7):
-        """Get hourly distribution of water intake."""
-        if not self.user:
-            raise ValueError("No user context set. Call set_user() first.")
-        return self.db.get_hourly_distribution(self.user['id'], days=days)
-    
-    def get_hourly_matrix(self, days=7):
-        """Get hourly distribution matrix for heatmap."""
-        if not self.user:
-            raise ValueError("No user context set. Call set_user() first.")
-        return self.db.get_hourly_distribution_matrix(self.user['id'], days=days)
-    
-    def get_today_hourly_breakdown(self):
-        """Get today's intake broken down by hour."""
-        if not self.user:
-            raise ValueError("No user context set. Call set_user() first.")
-        return self.db.get_today_hourly_breakdown(self.user['id'])
-    
-    def get_streak(self):
-        """Get current streak of days meeting daily goal."""
-        if not self.user:
-            raise ValueError("No user context set. Call set_user() first.")
-        return self.db.get_streak_count(self.user['id'])
-    
-    def get_achievement_data(self):
-        """Get data for achievement calculations."""
-        if not self.user:
-            raise ValueError("No user context set. Call set_user() first.")
-        return self.db.get_achievement_data(self.user['id'])
-    
-    def get_weekly_comparison(self):
-        """Compare this week vs last week."""
-        if not self.user:
-            raise ValueError("No user context set. Call set_user() first.")
-        return self.db.get_weekly_comparison(self.user['id'])
-    
-    def export_to_csv(self, filepath):
-        """Export hydration logs to CSV file."""
-        if not self.user:
-            raise ValueError("No user context set. Call set_user() first.")
-        return self.db.export_logs_csv(self.user['id'], filepath)
+        return self.db.get_daily_stats(days=days)
     
     def get_database_path(self):
         """Get the path to the database file."""
         return Path(self.db.db_file)
     
     def close(self):
-        """Close database connection (if needed."""
+        """Close database connection (if needed)."""
         pass
 
 
@@ -272,3 +162,9 @@ def get_data_manager():
     if _data_manager_instance is None:
         _data_manager_instance = DataManager()
     return _data_manager_instance
+
+
+def reset_data_manager():
+    """Reset the singleton instance (useful for testing)."""
+    global _data_manager_instance
+    _data_manager_instance = None

@@ -18,11 +18,10 @@ from settings_dialog import SettingsDialog
 class HydraPingController(QtCore.QObject):
     """Main controller managing business logic, timers, and state coordination"""
     
-    def __init__(self, data_manager, user):
+    def __init__(self, data_manager):
         super().__init__()
         
         self.data_manager = data_manager
-        self.user = user
         self.paused = False
         self.overlay_is_visible = False  # Start hidden
         
@@ -377,16 +376,7 @@ class HydraPingApp:
         self.current_user = None
         self.app = None
         
-        # Create default user if not exists
-        self._ensure_default_user()
-        
-        # Set user context in data manager
-        self.data_manager.set_user(self.current_user)
-        
-    def _ensure_default_user(self):
-        """Ensure a default user exists for the app"""
-        user = self.data_manager.get_or_create_default_user()
-        self.current_user = {'id': user['id']}
+        # No user initialization needed for single-user app
         
     def start(self):
         """Start the application"""
@@ -396,7 +386,7 @@ class HydraPingApp:
         self.app.setQuitOnLastWindowClosed(True)
         
         # Create controller
-        self.controller = HydraPingController(self.data_manager, self.current_user)
+        self.controller = HydraPingController(self.data_manager)
         
         # Connect cleanup on application quit
         self.app.aboutToQuit.connect(self.controller.cleanup)

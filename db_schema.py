@@ -1,10 +1,10 @@
 """
 Database schema and operations for HydraPing.
 Handles all SQLite database interactions.
+Simplified single-user version without authentication.
 """
 
 import sqlite3
-import hashlib
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -27,18 +27,10 @@ class Database:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
+        # Single-user settings table (no user_id needed)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS user_settings (
-                user_id INTEGER PRIMARY KEY,
+                id INTEGER PRIMARY KEY CHECK (id = 1),
                 daily_goal_ml INTEGER DEFAULT 2000,
                 reminder_interval_minutes INTEGER DEFAULT 30,
                 chime_enabled INTEGER DEFAULT 1,
@@ -51,33 +43,106 @@ class Database:
                 sleep_end_hour INTEGER DEFAULT 7,
                 bedtime_warning_enabled INTEGER DEFAULT 1,
                 snooze_duration_minutes INTEGER DEFAULT 5,
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                window_shape TEXT DEFAULT 'rectangular',
+                overlay_x INTEGER,
+                overlay_y INTEGER
             )
         ''')
         
+        # Hydration logs table (no user_id needed)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS hydration_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
                 amount_ml INTEGER NOT NULL,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         
         cursor.execute('''
-            CREATE INDEX IF NOT EXISTS idx_logs_user_timestamp 
-            ON hydration_logs(user_id, timestamp)
+            CREATE INDEX IF NOT EXISTS idx_logs_timestamp 
+            ON hydration_logs(timestamp)
         ''')
         
         self._migrate_schema(cursor)
         
+        # Initialize settings if not exists
+        cursor.execute('INSERT OR IGNORE INTO user_settings (id) VALUES (1)')
+        
         conn.commit()
         conn.close()
     
+    
     def _migrate_schema(self, cursor):
-        """Migrate existing database schema to add missing columns."""
+        """Migrate existing database schema to add missing columns and handle old schema."""
         try:
+            # Check if old users table exists and migrate data
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+            if cursor.fetchone():
+                print("[Database] Detected old multi-user schema, migrating to single-user...")
+                
+                # Store old settings values before dropping
+                try:
+                    cursor.execute("SELECT daily_goal_ml, reminder_interval_minutes, chime_enabled, default_sip_ml, auto_start, theme, custom_sound_path, loop_alert_sound, sleep_start_hour, sleep_end_hour, bedtime_warning_enabled, snooze_duration_minutes, window_shape FROM user_settings LIMIT 1")
+                    old_settings = cursor.fetchone()
+                except:
+                    old_settings = None
+                
+                # Drop old tables
+                cursor.execute('DROP TABLE IF EXISTS users')
+                cursor.execute('DROP TABLE IF EXISTS user_settings')
+                cursor.execute('DROP INDEX IF EXISTS idx_logs_user_timestamp')
+                
+                # Recreate tables with new schema (without user_id)
+                cursor.execute('''
+                    CREATE TABLE user_settings (
+                        id INTEGER PRIMARY KEY CHECK (id = 1),
+                        daily_goal_ml INTEGER DEFAULT 2000,
+                        reminder_interval_minutes INTEGER DEFAULT 30,
+                        chime_enabled INTEGER DEFAULT 1,
+                        default_sip_ml INTEGER DEFAULT 250,
+                        auto_start INTEGER DEFAULT 0,
+                        theme TEXT DEFAULT 'Dark Glassmorphic',
+                        custom_sound_path TEXT,
+                        loop_alert_sound INTEGER DEFAULT 0,
+                        sleep_start_hour INTEGER DEFAULT 22,
+                        sleep_end_hour INTEGER DEFAULT 7,
+                        bedtime_warning_enabled INTEGER DEFAULT 1,
+                        snooze_duration_minutes INTEGER DEFAULT 5,
+                        window_shape TEXT DEFAULT 'rectangular',
+                        overlay_x INTEGER,
+                        overlay_y INTEGER
+                    )
+                ''')
+                
+                # Restore old settings if they existed
+                if old_settings:
+                    cursor.execute('''
+                        INSERT INTO user_settings (id, daily_goal_ml, reminder_interval_minutes, chime_enabled, default_sip_ml, auto_start, theme, custom_sound_path, loop_alert_sound, sleep_start_hour, sleep_end_hour, bedtime_warning_enabled, snooze_duration_minutes, window_shape)
+                        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', old_settings)
+                else:
+                    cursor.execute('INSERT INTO user_settings (id) VALUES (1)')
+                
+                # Migrate hydration logs (remove user_id column)
+                try:
+                    cursor.execute('ALTER TABLE hydration_logs RENAME TO hydration_logs_old')
+                    cursor.execute('''
+                        CREATE TABLE hydration_logs (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            amount_ml INTEGER NOT NULL,
+                            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    ''')
+                    cursor.execute('INSERT INTO hydration_logs (id, amount_ml, timestamp) SELECT id, amount_ml, timestamp FROM hydration_logs_old')
+                    cursor.execute('DROP TABLE hydration_logs_old')
+                    cursor.execute('CREATE INDEX idx_logs_timestamp ON hydration_logs(timestamp)')
+                    print("[Database] Migration complete!")
+                except:
+                    pass
+                
+                return
+            
+            # Normal migrations for existing single-user schema
             cursor.execute("PRAGMA table_info(user_settings)")
             columns = [col[1] for col in cursor.fetchall()]
             
@@ -113,64 +178,17 @@ class Database:
             
             if 'window_shape' not in columns:
                 cursor.execute("ALTER TABLE user_settings ADD COLUMN window_shape TEXT DEFAULT 'rectangular'")
+            
+            if 'overlay_x' not in columns:
+                cursor.execute('ALTER TABLE user_settings ADD COLUMN overlay_x INTEGER')
+            
+            if 'overlay_y' not in columns:
+                cursor.execute('ALTER TABLE user_settings ADD COLUMN overlay_y INTEGER')
         except Exception as e:
             print(f"[Database] Schema migration note: {e}")
     
-    def _hash_password(self, password):
-        """Hash a password using SHA-256."""
-        return hashlib.sha256(password.encode()).hexdigest()
     
-    def create_user(self, email, password):
-        """Create a new user account."""
-        try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-            
-            password_hash = self._hash_password(password)
-            cursor.execute('''
-                INSERT INTO users (email, password_hash)
-                VALUES (?, ?)
-            ''', (email, password_hash))
-            
-            user_id = cursor.lastrowid
-            
-            cursor.execute('''
-                INSERT INTO user_settings (user_id)
-                VALUES (?)
-            ''', (user_id,))
-            
-            conn.commit()
-            conn.close()
-            
-            return True, user_id
-        except sqlite3.IntegrityError:
-            return False, "User already exists"
-        except Exception as e:
-            return False, str(e)
-    
-    def authenticate_user(self, email, password):
-        """Authenticate user credentials."""
-        try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-            
-            password_hash = self._hash_password(password)
-            cursor.execute('''
-                SELECT id, email FROM users
-                WHERE email = ? AND password_hash = ?
-            ''', (email, password_hash))
-            
-            user = cursor.fetchone()
-            conn.close()
-            
-            if user:
-                return True, {'id': user[0], 'email': user[1]}
-            else:
-                return False, "Invalid credentials"
-        except Exception as e:
-            return False, str(e)
-    
-    def get_user_settings(self, user_id):
+    def get_user_settings(self):
         """Get user settings."""
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -178,10 +196,11 @@ class Database:
         cursor.execute('''
             SELECT daily_goal_ml, reminder_interval_minutes, chime_enabled,
                    default_sip_ml, auto_start, theme, custom_sound_path, loop_alert_sound,
-                   sleep_start_hour, sleep_end_hour, bedtime_warning_enabled, snooze_duration_minutes
+                   sleep_start_hour, sleep_end_hour, bedtime_warning_enabled, snooze_duration_minutes,
+                   window_shape, overlay_x, overlay_y
             FROM user_settings
-            WHERE user_id = ?
-        ''', (user_id,))
+            WHERE id = 1
+        ''')
         
         row = cursor.fetchone()
         conn.close()
@@ -199,11 +218,14 @@ class Database:
                 'sleep_start_hour': row[8],
                 'sleep_end_hour': row[9],
                 'bedtime_warning_enabled': bool(row[10]),
-                'snooze_duration_minutes': row[11]
+                'snooze_duration_minutes': row[11],
+                'window_shape': row[12] if len(row) > 12 else 'rectangular',
+                'overlay_x': row[13] if len(row) > 13 else None,
+                'overlay_y': row[14] if len(row) > 14 else None
             }
         return None
     
-    def update_user_settings(self, user_id, **kwargs):
+    def update_user_settings(self, **kwargs):
         """Update user settings."""
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -218,31 +240,30 @@ class Database:
             values.append(value)
         
         if set_clauses:
-            values.append(user_id)
             query = f'''
                 UPDATE user_settings
                 SET {', '.join(set_clauses)}
-                WHERE user_id = ?
+                WHERE id = 1
             '''
             cursor.execute(query, values)
             conn.commit()
         
         conn.close()
     
-    def log_water_intake(self, user_id, amount_ml):
+    def log_water_intake(self, amount_ml):
         """Log water intake."""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         cursor.execute('''
-            INSERT INTO hydration_logs (user_id, amount_ml)
-            VALUES (?, ?)
-        ''', (user_id, amount_ml))
+            INSERT INTO hydration_logs (amount_ml)
+            VALUES (?)
+        ''', (amount_ml,))
         
         conn.commit()
         conn.close()
     
-    def get_today_intake(self, user_id):
+    def get_today_intake(self):
         """Get total water intake for today."""
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -252,15 +273,15 @@ class Database:
         cursor.execute('''
             SELECT COALESCE(SUM(amount_ml), 0)
             FROM hydration_logs
-            WHERE user_id = ? AND timestamp >= ?
-        ''', (user_id, today_start))
+            WHERE timestamp >= ?
+        ''', (today_start,))
         
         total = cursor.fetchone()[0]
         conn.close()
         
         return total
     
-    def get_recent_logs(self, user_id, limit=50):
+    def get_recent_logs(self, limit=50):
         """Get recent hydration logs."""
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -268,10 +289,9 @@ class Database:
         cursor.execute('''
             SELECT id, amount_ml, timestamp
             FROM hydration_logs
-            WHERE user_id = ?
             ORDER BY timestamp DESC
             LIMIT ?
-        ''', (user_id, limit))
+        ''', (limit,))
         
         logs = [{'id': row[0], 'amount_ml': row[1], 'timestamp': row[2]} 
                 for row in cursor.fetchall()]
