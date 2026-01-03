@@ -797,17 +797,19 @@ class OverlayWindow(QtWidgets.QWidget):
         self._bg_box_anim.setEndValue(1.0)
         self._bg_box_anim.start()
         
-        # Show info label and start alternation
-        self._show_consumed = True
-        self._info_label.setText(f"{self._current_consumed}ml / {self._current_goal}ml")
-        self._info_label.setVisible(True)
-        self._info_alternation_timer.start(2000)
-        
-        # Fade in close button
-        self._close_anim.stop()
-        self._close_anim.setStartValue(self._close_opacity_effect.opacity())
-        self._close_anim.setEndValue(1.0)
-        self._close_anim.start()
+        # Only show info/close in rectangular mode
+        if self._layout_manager.should_show_info_label():
+            # Show info label and start alternation
+            self._show_consumed = True
+            self._info_label.setText(f"{self._current_consumed}ml / {self._current_goal}ml")
+            self._info_label.setVisible(True)
+            self._info_alternation_timer.start(2000)
+            
+            # Fade in close button
+            self._close_anim.stop()
+            self._close_anim.setStartValue(self._close_opacity_effect.opacity())
+            self._close_anim.setEndValue(1.0)
+            self._close_anim.start()
     
     def enterEvent(self, event):
         """Handle mouse entering the overlay widget"""
@@ -1013,8 +1015,8 @@ class OverlayWindow(QtWidgets.QWidget):
         """Update countdown text (only in non-alert mode)"""
         if not self._alert_mode:
             self._countdown_text = text
-            # Update display ONLY if currently showing countdown AND hovered
-            if self._is_hovered and not self._show_consumed:
+            # Update display ONLY if currently showing countdown AND hovered AND in rectangular mode
+            if self._is_hovered and not self._show_consumed and self._layout_manager.should_show_info_label():
                 self._info_label.setText(text)
             
     def update_consumption(self, consumed, goal):

@@ -11,12 +11,12 @@ class CircularLayout(BaseLayout):
     
     def get_window_size(self):
         """Return (width, height) for this layout"""
-        return (150, 150)
+        return (44, 44)
     
     def create_container_layout(self, container):
         """Create and return the layout for the container widget"""
         layout = QtWidgets.QVBoxLayout(container)
-        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         return layout
@@ -36,11 +36,11 @@ class CircularLayout(BaseLayout):
     
     def get_bg_box_geometry(self):
         """Return (x, y, width, height) for background box"""
-        return (0, 0, 150, 150)
+        return (0, 0, 44, 44)
     
     def get_progress_widget_size(self):
         """Return (width, height) for progress widget"""
-        return (130, 130)
+        return (35, 35)
     
     def should_show_message_label(self):
         """Return True if message label should be visible"""

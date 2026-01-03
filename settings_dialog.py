@@ -186,13 +186,50 @@ class SettingsDialog(QtWidgets.QDialog):
             }
         """)
         form_layout.addRow("Theme:", self.theme_combo)
-                # Window Shape Selection
-        self.shape_combo = QtWidgets.QComboBox()
-        self.shape_combo.addItems(['Rectangular', 'Circular'])
-        self.shape_combo.setMinimumWidth(150)
-        self.shape_combo.setStyleSheet(self.theme_combo.styleSheet())
-        form_layout.addRow("Window Shape:", self.shape_combo)
-                # Auto-launch checkbox
+        
+        # Display Mode Selection (Radio Buttons)
+        display_mode_widget = QtWidgets.QWidget()
+        display_mode_widget.setStyleSheet("QWidget { background: transparent; }")
+        display_mode_layout = QtWidgets.QHBoxLayout(display_mode_widget)
+        display_mode_layout.setContentsMargins(0, 0, 0, 0)
+        display_mode_layout.setSpacing(12)
+        
+        self.normal_mode_radio = QtWidgets.QRadioButton("Normal")
+        self.normal_mode_radio.setStyleSheet("""
+            QRadioButton {
+                font-size: 13px;
+                color: #E8EAED;
+                spacing: 8px;
+            }
+            QRadioButton::indicator {
+                width: 18px;
+                height: 18px;
+            }
+            QRadioButton::indicator:unchecked {
+                border: 2px solid #5F6368;
+                border-radius: 9px;
+                background: #2B2B2B;
+            }
+            QRadioButton::indicator:checked {
+                border: 2px solid #8AB4F8;
+                border-radius: 9px;
+                background: qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5, stop:0 #8AB4F8, stop:0.5 #8AB4F8, stop:0.51 transparent);
+            }
+        """)
+        
+        self.minimal_mode_radio = QtWidgets.QRadioButton("Minimal")
+        self.minimal_mode_radio.setStyleSheet(self.normal_mode_radio.styleSheet())
+        
+        # Set default checked
+        self.normal_mode_radio.setChecked(True)
+        
+        display_mode_layout.addWidget(self.normal_mode_radio)
+        display_mode_layout.addWidget(self.minimal_mode_radio)
+        display_mode_layout.addStretch()
+        
+        form_layout.addRow("Display Mode:", display_mode_widget)
+        
+        # Auto-launch checkbox
         self.auto_launch_check = QtWidgets.QCheckBox("Launch on system startup")
         self.auto_launch_check.setStyleSheet("""
             QCheckBox {
@@ -594,8 +631,11 @@ class SettingsDialog(QtWidgets.QDialog):
         
         # Load window shape setting
         window_shape = self.settings.get('window_shape', 'rectangular')
-        self.shape_combo.setCurrentText('Rectangular' if window_shape == 'rectangular' else 'Circular')
-        
+        if window_shape == 'rectangular':
+            self.normal_mode_radio.setChecked(True)
+        else:
+            self.minimal_mode_radio.setChecked(True)
+    
     def _save_settings(self):
         """Save settings and close dialog"""
         # Get values
@@ -615,7 +655,7 @@ class SettingsDialog(QtWidgets.QDialog):
         sleep_start = self.sleep_start_spin.value()
         sleep_end = self.sleep_end_spin.value()
         bedtime_warning = self.bedtime_warning_check.isChecked()
-        window_shape = 'rectangular' if self.shape_combo.currentText() == 'Rectangular' else 'circular'
+        window_shape = 'rectangular' if self.normal_mode_radio.isChecked() else 'circular'
         
         # Update via data_manager
         self.data_manager.update_settings(
@@ -686,7 +726,7 @@ class SettingsDialog(QtWidgets.QDialog):
             self.sleep_start_spin.setValue(22)
             self.sleep_end_spin.setValue(7)
             self.bedtime_warning_check.setChecked(True)
-            self.shape_combo.setCurrentText('Rectangular')
+            self.normal_mode_radio.setChecked(True)
     
     def _reset_water(self):
         """Reset today's water consumption to zero"""
