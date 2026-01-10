@@ -124,9 +124,55 @@ class DataManager:
         """Get total water intake for today."""
         return self.db.get_today_intake()
     
-    def get_recent_logs(self, limit=50):
-        """Get recent hydration logs."""
+    def get_recent_logs(self, limit=50, days=None):
+        """
+        Get recent hydration logs.
+        If days is specified, get logs from the last N days instead of using limit.
+        """
+        if days is not None:
+            cutoff_date = datetime.now() - timedelta(days=days)
+            conn = self.db.get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, amount_ml, timestamp
+                FROM hydration_logs
+                WHERE timestamp >= ?
+                ORDER BY timestamp ASC
+            ''', (cutoff_date,))
+            
+            logs = []
+            for row in cursor.fetchall():
+                logs.append({
+                    'id': row[0],
+                    'amount': row[1],
+                    'timestamp': datetime.fromisoformat(row[2]) if isinstance(row[2], str) else row[2]
+                })
+            conn.close()
+            return logs
+        
         return self.db.get_recent_logs(limit)
+    
+    def get_today_logs(self):
+        """Get all logs for today."""
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, amount_ml, timestamp
+            FROM hydration_logs
+            WHERE timestamp >= ?
+            ORDER BY timestamp ASC
+        ''', (today,))
+        
+        logs = []
+        for row in cursor.fetchall():
+            logs.append({
+                'id': row[0],
+                'amount': row[1],
+                'timestamp': datetime.fromisoformat(row[2]) if isinstance(row[2], str) else row[2]
+            })
+        conn.close()
+        return logs
     
     def delete_log(self, log_id):
         """Delete a specific log entry."""

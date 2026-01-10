@@ -23,6 +23,8 @@ Always-on-top glassmorphic overlay perfect for any workflow with **two display m
 - **Perfectly centered** progress ring
 
 **Common Features:**
+- **AI Predictions** - "Based on your pattern, you'll likely need water in 47 minutes"
+- **Smart Scheduling** - Learns your patterns for optimal reminder timing
 - **Auto-hide on sleep** - respects your sleep schedule
 - **Theme-aware** - 6 beautiful glassmorphic themes
 - **Performance optimized** - minimal CPU/memory footprint
@@ -32,12 +34,14 @@ Always-on-top glassmorphic overlay perfect for any workflow with **two display m
 ## Features
 
 - **Dual Display Modes** - Switch between Normal (full bar) and Minimal (44px circle)
+- **AI-Powered Predictions** - Smart pattern analysis predicts when you'll need water
+- **Intelligent Scheduling** - Learns your drinking patterns for optimal reminder timing
 - **Modern Glass-morphism UI** - Beautiful, elegant interface with smooth animations
 - **Configuration-Based Layouts** - Flexible layout system for easy customization
 - **High Performance** - Optimized dual-timer system with smart caching
 - **Smart Reminders** - Customizable intervals with sleep mode
 - **Progress Tracking** - Circular progress ring with live updates
-- **Motivational Messages** - Rotating inspirational quotes
+- **Motivational Messages** - Rotating inspirational quotes with AI insights
 - **Confetti Celebration** - Visual celebration on goal achievement
 - **Custom Sound Alerts** - Use your own audio files (WAV/MP3/OGG/FLAC)
 - **Sleep Hours** - Auto-pause reminders during your sleep schedule
@@ -112,6 +116,27 @@ The application starts directly in **Overlay Mode** - a minimalist always-on-top
 - **Menu (⋮)** - Access drink presets and settings
 - **Hover** - Reveals additional info and controls (Normal mode only)
 - **Settings button** in dialog to close application
+
+### AI & Smart Features
+
+**AI Predictions:**
+- Analyzes your drinking patterns over 7-14 days
+- Predicts when you'll likely need water based on:
+  - Average intervals between drinks
+  - Time-of-day patterns
+  - Current hydration velocity
+  - Your consistency score
+- Shows predictions like: "AI predicts: ~47min until thirst (85%)"
+- High-confidence predictions (>60%) displayed in countdown area
+- Adjusts reminder intervals automatically based on your patterns
+
+**Smart Scheduling:**
+- Learns your drinking patterns over time
+- Increases reminder frequency if you're behind schedule
+- Relaxes reminders if you're ahead of goal
+- Tracks schedule adherence throughout the day
+- Displays: "Great pace! You're ahead of schedule"
+- Or: "Behind schedule - drink up!"
 
 **Quick Presets:**
 - Light Activity: 2000ml daily goal

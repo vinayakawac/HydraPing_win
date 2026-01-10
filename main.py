@@ -1,6 +1,7 @@
 """
 HydraPing - Main Controller
 MVC Controller + Event-driven architecture (tray removed)
+Features: AI predictions, smart scheduling
 """
 
 import sys
@@ -11,6 +12,7 @@ from PySide6 import QtCore, QtWidgets, QtGui
 
 from core.data_manager import get_data_manager
 from core.auto_launch import is_auto_launch_enabled, enable_auto_launch, disable_auto_launch
+from core.pattern_analyzer import PatternAnalyzer
 from overlay_window import OverlayWindow
 from settings_dialog import SettingsDialog
 
@@ -24,6 +26,9 @@ class HydraPingController(QtCore.QObject):
         self.data_manager = data_manager
         self.paused = False
         self.overlay_is_visible = False  # Start hidden
+        
+        # AI system
+        self.pattern_analyzer = PatternAnalyzer(data_manager)
         
         # Tray signals removed
         
@@ -63,6 +68,11 @@ class HydraPingController(QtCore.QObject):
         self._system_check_timer.setInterval(60000)  # 1 minute
         self._system_check_timer.timeout.connect(self._system_checks)
         
+        # AI message timer (30 seconds) - update smart messages
+        self._ai_message_timer = QtCore.QTimer(self)
+        self._ai_message_timer.setInterval(30000)  # 30 seconds
+        self._ai_message_timer.timeout.connect(self._update_smart_message)
+        
         # Tracking
         self.last_reminder_time = time.time()
         self.last_date = datetime.now().date()
@@ -77,12 +87,14 @@ class HydraPingController(QtCore.QObject):
         """Start the application - show overlay"""
         self._countdown_timer.start()
         self._system_check_timer.start()
+        self._ai_message_timer.start()
         self._system_checks()  # Run initial check
+        self._update_smart_message()  # Initial smart message
         self._overlay.show()
         self.overlay_is_visible = True
         
     def _update_countdown(self):
-        """Fast timer: Update countdown display every second"""
+        """Fast timer: Update countdown display every second with AI predictions"""
         if not self.paused and not self._in_sleep_hours:
             # Check if snoozed
             if self._is_snoozed:
@@ -98,25 +110,72 @@ class HydraPingController(QtCore.QObject):
                     secs = snooze_remaining % 60
                     self._overlay.update_countdown(f"Snoozed: {mins:02d}:{secs:02d}")
             else:
-                interval = self.settings.get('reminder_interval_minutes', 45)
+                # Get base interval and apply intelligent adjustments
+                base_interval = self.settings.get('reminder_interval_minutes', 45)
+                
+                # Apply pattern-based adjustment
+                adjusted_interval = self.pattern_analyzer.get_smart_reminder_delay(base_interval)
+                
                 elapsed_seconds = time.time() - self.last_reminder_time
-                remaining_seconds = int((interval * 60) - elapsed_seconds)
+                remaining_seconds = int((adjusted_interval * 60) - elapsed_seconds)
                 
                 # Check if time to trigger alert
                 if remaining_seconds <= 0:
                     self._trigger_alert()
                     self.last_reminder_time = time.time()
-                    remaining_seconds = interval * 60
+                    remaining_seconds = adjusted_interval * 60
                 
-                # Update display
+                # Update display with AI prediction
                 if remaining_seconds > 0:
                     mins = remaining_seconds // 60
                     secs = remaining_seconds % 60
-                    self._overlay.update_countdown(f"Next: {mins:02d}:{secs:02d}")
+                    
+                    # Try to show AI prediction
+                    prediction = self.pattern_analyzer.predict_next_drink_time()
+                    if prediction and prediction[1] > 0.6:  # High confidence
+                        pred_time, confidence, _ = prediction
+                        pred_mins = int((pred_time - datetime.now()).total_seconds() / 60)
+                        if pred_mins > 0 and pred_mins < adjusted_interval * 1.5:
+                            self._overlay.update_countdown(f"AI: ~{pred_mins}m (Next: {mins:02d}:{secs:02d})")
+                        else:
+                            self._overlay.update_countdown(f"Next: {mins:02d}:{secs:02d}")
+                    else:
+                        self._overlay.update_countdown(f"Next: {mins:02d}:{secs:02d}")
                 else:
                     self._overlay.update_countdown("Next: 00:00")
         elif self._in_sleep_hours:
             self._overlay.update_countdown("Sleep Mode")
+    
+    def _update_smart_message(self):
+        """Update overlay message with AI predictions"""
+        try:
+            # Get AI prediction
+            prediction = self.pattern_analyzer.predict_next_drink_time()
+            
+            # Decide which message to show
+            if prediction and prediction[1] > 0.7:  # High confidence prediction
+                pred_time, confidence, reason = prediction
+                pred_mins = int((pred_time - datetime.now()).total_seconds() / 60)
+                
+                if 0 < pred_mins <= 60:
+                    # Show prediction message
+                    confidence_pct = int(confidence * 100)
+                    message = f"AI predicts: ~{pred_mins}min until thirst ({confidence_pct}%)"
+                    self._overlay.set_smart_message(message)
+                    return
+            
+            # Check if ahead/behind schedule
+            ahead = self.pattern_analyzer.is_ahead_of_schedule()
+            if ahead is True:
+                self._overlay.set_smart_message("Great pace! You're ahead of schedule")
+                return
+            elif ahead is False:
+                self._overlay.set_smart_message("Behind schedule - drink up!")
+                return
+            
+            # Fallback to default rotation (do nothing, let normal rotation continue)
+        except Exception as e:
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] Smart message error: {e}")
     
     def _system_checks(self):
         """Slow timer: Check date rollover, sleep hours, bedtime warning every minute"""

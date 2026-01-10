@@ -687,6 +687,11 @@ class OverlayWindow(QtWidgets.QWidget):
             self._current_message_index = (self._current_message_index + 1) % len(self._motivational_messages)
             self._message_label.setText(self._motivational_messages[self._current_message_index])
     
+    def set_smart_message(self, message: str):
+        """Set a smart message (AI prediction or context-aware)"""
+        if hasattr(self, '_message_label') and not self._alert_mode:
+            self._message_label.setText(message)
+    
     def _alternate_info_display(self):
         """Alternate between showing consumed ml and countdown timer"""
         if self._is_hovered and not self._alert_mode:
