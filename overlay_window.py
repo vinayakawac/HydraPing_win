@@ -17,7 +17,7 @@ class CircularProgress(QtWidgets.QWidget):
     
     def __init__(self, parent=None, theme_manager=None):
         super().__init__(parent)
-        self.setFixedSize(40, 40)
+        self.setFixedSize(46, 46)
         self._progress = 0  # 0-100
         self._animated_progress = 0
         self.theme_manager = theme_manager or ThemeManager()
@@ -48,12 +48,13 @@ class CircularProgress(QtWidgets.QWidget):
             self._anim_running = True
         
     def paintEvent(self, event):
-        """Draw circular progress ring"""
+        """Draw circular progress ring with enhanced visuals"""
         if not self.isVisible():
             return
             
         painter = QtGui.QPainter(self)
         painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.TextAntialiasing)
         
         # Calculate dimensions with perfect centering
         width = self.width()
@@ -61,19 +62,26 @@ class CircularProgress(QtWidgets.QWidget):
         size = min(width, height)
         center = QtCore.QPointF(width / 2.0, height / 2.0)
         
-        # Scale pen width and radius based on size
-        pen_width = max(2.5, size / 16.0)
-        radius = (size - pen_width) / 2.0 - 1
+        # Refined pen width for better visual balance
+        pen_width = max(2.8, size / 14.0)
+        radius = (size - pen_width) / 2.0 - 1.5
         
-        # Background circle
-        pen = QtGui.QPen(QtGui.QColor(255, 255, 255, 30))
+        # Subtle shadow/glow background
+        shadow_pen = QtGui.QPen(QtGui.QColor(0, 0, 0, 40))
+        shadow_pen.setWidthF(pen_width + 1.0)
+        shadow_pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
+        painter.setPen(shadow_pen)
+        painter.drawEllipse(center, radius - 0.5, radius - 0.5)
+        
+        # Background circle with gradient feel
+        pen = QtGui.QPen(QtGui.QColor(255, 255, 255, 25))
         pen.setWidthF(pen_width)
         pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
         painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
         painter.drawEllipse(center, radius, radius)
         
-        # Progress arc
+        # Progress arc with glow effect
         if self._animated_progress > 0:
             # Get theme-based colors
             colors = self.theme_manager.get_progress_colors()
@@ -85,28 +93,43 @@ class CircularProgress(QtWidgets.QWidget):
             else:
                 color_str = colors['high']
             
-            # Parse rgba string to QColor
             color = self._parse_rgba(color_str)
-                
+            rect = QtCore.QRectF(center.x() - radius, center.y() - radius, radius * 2, radius * 2)
+            span_angle = int(self._animated_progress * 360 / 100 * 16)
+            
+            # Outer glow
+            glow_pen = QtGui.QPen(color)
+            glow_pen.setWidthF(pen_width + 1.5)
+            glow_pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
+            glow_color = QtGui.QColor(color)
+            glow_color.setAlpha(80)
+            glow_pen.setColor(glow_color)
+            painter.setPen(glow_pen)
+            painter.drawArc(rect, 90 * 16, -span_angle)
+            
+            # Main progress arc
             pen = QtGui.QPen(color)
             pen.setWidthF(pen_width)
             pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
             painter.setPen(pen)
-            
-            # Draw arc (-90 to start at top) with better precision
-            span_angle = int(self._animated_progress * 360 / 100 * 16)
-            rect = QtCore.QRectF(center.x() - radius, center.y() - radius, radius * 2, radius * 2)
             painter.drawArc(rect, 90 * 16, -span_angle)
             
-        # Percentage text
-        painter.setPen(QtGui.QColor(255, 255, 255, 250))
+        # Percentage text with shadow
         font = painter.font()
-        # Scale font size based on widget size
-        font_size = max(8, int(size / 4.5))
+        font_size = max(9, int(size / 4.2))
         font.setPixelSize(font_size)
         font.setWeight(QtGui.QFont.Weight.Bold)
+        font.setFamily("Segoe UI")
         painter.setFont(font)
+        
         text = f"{int(self._animated_progress)}%"
+        
+        # Text shadow for depth
+        painter.setPen(QtGui.QColor(0, 0, 0, 120))
+        painter.drawText(self.rect().adjusted(0, 1, 0, 1), QtCore.Qt.AlignmentFlag.AlignCenter, text)
+        
+        # Main text
+        painter.setPen(QtGui.QColor(255, 255, 255, 255))
         painter.drawText(self.rect(), QtCore.Qt.AlignmentFlag.AlignCenter, text)
     
     def _parse_rgba(self, rgba_str):
@@ -132,32 +155,86 @@ class OverlayWindow(QtWidgets.QWidget):
     terminate_requested = QtCore.Signal()
     
     def paintEvent(self, event):
-        """Custom paint event for adaptive shape border"""
+        """Custom paint event for adaptive shape border with ultra-smooth edges"""
         super().paintEvent(event)
         
         painter = QtGui.QPainter(self)
         painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
         painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform, True)
-        
-        # Draw border that adapts to current shape
-        pen = QtGui.QPen(QtGui.QColor(255, 255, 255, 60))
-        pen.setWidthF(1.5)  # Use float for smoother line
-        pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
-        pen.setJoinStyle(QtCore.Qt.PenJoinStyle.RoundJoin)
-        painter.setPen(pen)
-        painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+        painter.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_SourceOver)
         
         rect = self.rect()
-        adjusted_rect = QtCore.QRectF(rect).adjusted(0.75, 0.75, -0.75, -0.75)
         
         # Draw shape based on current window shape
         if self._window_shape == 'circular':
+            # Multi-layer circular border for depth
+            center = QtCore.QPointF(rect.width() / 2.0, rect.height() / 2.0)
+            radius = min(rect.width(), rect.height()) / 2.0
+            
+            # Outer shadow with blur effect
+            for i in range(3):
+                shadow_alpha = 20 - (i * 6)
+                shadow_pen = QtGui.QPen(QtGui.QColor(0, 0, 0, shadow_alpha))
+                shadow_pen.setWidthF(2.5 - (i * 0.5))
+                painter.setPen(shadow_pen)
+                painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+                painter.drawEllipse(center, radius - 0.8 - i, radius - 0.8 - i)
+            
+            # Main border with gradient effect
+            gradient = QtGui.QRadialGradient(center, radius)
+            gradient.setColorAt(0, QtGui.QColor(255, 255, 255, 0))
+            gradient.setColorAt(0.85, QtGui.QColor(255, 255, 255, 75))
+            gradient.setColorAt(1, QtGui.QColor(255, 255, 255, 95))
+            
+            pen = QtGui.QPen(QtGui.QBrush(gradient), 2.0)
+            pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
+            painter.setPen(pen)
+            adjusted_rect = QtCore.QRectF(1.0, 1.0, rect.width() - 2.0, rect.height() - 2.0)
             painter.drawEllipse(adjusted_rect)
+            
+            # Inner highlight
+            highlight_pen = QtGui.QPen(QtGui.QColor(255, 255, 255, 35))
+            highlight_pen.setWidthF(0.8)
+            painter.setPen(highlight_pen)
+            painter.drawEllipse(center, radius - 2.8, radius - 2.8)
         else:
-            # Draw rounded rectangle for rectangular mode
-            painter.drawRoundedRect(adjusted_rect, 10, 10)
+            # Ultra-smooth rounded rectangle using QPainterPath
+            # Multi-layer shadow for depth
+            for i in range(3):
+                shadow_alpha = 15 - (i * 4)
+                shadow_pen = QtGui.QPen(QtGui.QColor(0, 0, 0, shadow_alpha))
+                shadow_pen.setWidthF(2.5 - (i * 0.5))
+                shadow_pen.setJoinStyle(QtCore.Qt.PenJoinStyle.RoundJoin)
+                painter.setPen(shadow_pen)
+                painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+                shadow_rect = QtCore.QRectF(rect).adjusted(1.5 + i * 0.3, 1.5 + i * 0.3, -1.5 - i * 0.3, -1.5 - i * 0.3)
+                painter.drawRoundedRect(shadow_rect, 11 - i * 0.5, 11 - i * 0.5)
+            
+            # Main border with smooth path
+            path = QtGui.QPainterPath()
+            adjusted_rect = QtCore.QRectF(rect).adjusted(1.2, 1.2, -1.2, -1.2)
+            path.addRoundedRect(adjusted_rect, 10.5, 10.5)
+            
+            pen = QtGui.QPen(QtGui.QColor(255, 255, 255, 75))
+            pen.setWidthF(2.0)
+            pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
+            pen.setJoinStyle(QtCore.Qt.PenJoinStyle.RoundJoin)
+            painter.setPen(pen)
+            painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+            painter.drawPath(path)
+            
+            # Inner highlight for polish
+            inner_path = QtGui.QPainterPath()
+            inner_rect = QtCore.QRectF(rect).adjusted(2.5, 2.5, -2.5, -2.5)
+            inner_path.addRoundedRect(inner_rect, 9, 9)
+            
+            highlight_pen = QtGui.QPen(QtGui.QColor(255, 255, 255, 30))
+            highlight_pen.setWidthF(1.0)
+            highlight_pen.setJoinStyle(QtCore.Qt.PenJoinStyle.RoundJoin)
+            painter.setPen(highlight_pen)
+            painter.drawPath(inner_path)
         
-        painter.end()  # Properly end the painter
+        painter.end()
     
     def __init__(self, parent=None, theme_name='Dark Glassmorphic'):
         super().__init__(parent)
@@ -269,7 +346,9 @@ class OverlayWindow(QtWidgets.QWidget):
             QtCore.Qt.WindowType.NoDropShadowWindowHint
         )
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_NoSystemBackground)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_OpaquePaintEvent, False)
         self.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         
         # Fixed size for overlay (will be updated based on shape)

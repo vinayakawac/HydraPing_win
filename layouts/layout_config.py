@@ -110,15 +110,15 @@ LAYOUT_CONFIGS = {
     ),
     
     "circular": LayoutConfig(
-        window_size=(44, 44),
+        window_size=(52, 52),
         window_shape="circle",
         layout_direction="vertical",
         layout_spacing=0,
-        layout_margins=(2, 2, 2, 2),
+        layout_margins=(3, 3, 3, 3),
         
         progress_widget=WidgetConfig(
             visible=True,
-            size=(40, 40),
+            size=(46, 46),
             stretch=0,
             alignment=QtCore.Qt.AlignmentFlag.AlignCenter
         ),
@@ -133,7 +133,7 @@ LAYOUT_CONFIGS = {
         alert_target_layout="rectangular",
         show_buttons_in_alert=False,
         
-        bg_box_geometry=(0, 0, 44, 44)
+        bg_box_geometry=(0, 0, 52, 52)
     )
 }
 
