@@ -119,24 +119,28 @@ The application starts directly in **Overlay Mode** - a minimalist always-on-top
 
 ### AI & Smart Features
 
-**AI Predictions:**
-- Analyzes your drinking patterns over 7-14 days
-- Predicts when you'll likely need water based on:
-  - Average intervals between drinks
-  - Time-of-day patterns
-  - Current hydration velocity
-  - Your consistency score
+**Enhanced AI Predictions:**
+- **Robust Pattern Analysis**: Analyzes drinking patterns over 7-14 days with outlier detection
+- **Multiple Prediction Methods**: Uses median, mean, and recent-trend fallbacks for reliability
+- **Intelligent Confidence Scoring**: Shows prediction reliability (30%-95% confidence)
+- **Time-of-Day Awareness**: Adjusts predictions based on your hourly drinking habits
+- **Fault Tolerance**: Comprehensive error handling ensures system never crashes
+- **Smart Caching**: 5-minute prediction cache for performance optimization
 - Shows predictions like: "AI predicts: ~47min until thirst (85%)"
 - High-confidence predictions (>60%) displayed in countdown area
-- Adjusts reminder intervals automatically based on your patterns
+- Automatically adjusts reminder intervals based on your patterns
+- **Data Quality Monitoring**: Tracks data quality (excellent/good/fair/poor)
+- **Outlier Removal**: Filters anomalies for more accurate predictions
 
 **Smart Scheduling:**
-- Learns your drinking patterns over time
-- Increases reminder frequency if you're behind schedule
-- Relaxes reminders if you're ahead of goal
-- Tracks schedule adherence throughout the day
+- **Pattern Learning**: Learns your drinking patterns with statistical validation
+- **Adaptive Reminders**: Increases frequency if behind, relaxes if ahead
+- **Schedule Tracking**: Monitors adherence throughout the day with 16-hour active window
+- **Validation**: Ensures all data is valid before making decisions
 - Displays: "Great pace! You're ahead of schedule"
 - Or: "Behind schedule - drink up!"
+- **Hydration Velocity**: Tracks ml/hour consumption rate
+- **Error Recovery**: Gracefully handles database errors and invalid data
 
 **Quick Presets:**
 - Light Activity: 2000ml daily goal

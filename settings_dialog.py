@@ -33,6 +33,13 @@ class SettingsDialog(QtWidgets.QDialog):
         self._setup_ui()
         self._load_settings()
         self._apply_monochrome_style()
+    
+    def _create_smooth_effect(self):
+        """Create a graphics effect for ultra-smooth button edges"""
+        blur = QtWidgets.QGraphicsBlurEffect()
+        blur.setBlurRadius(0.5)  # Very subtle blur for edge smoothing
+        blur.setBlurHints(QtWidgets.QGraphicsBlurEffect.BlurHint.QualityHint)
+        return blur
         
     def _setup_ui(self):
         """Setup the dialog UI"""
@@ -282,33 +289,35 @@ class SettingsDialog(QtWidgets.QDialog):
         
         browse_btn = QtWidgets.QPushButton("Browse...")
         browse_btn.setFixedHeight(28)
+        browse_btn.setGraphicsEffect(self._create_smooth_effect())
         browse_btn.setStyleSheet("""
             QPushButton {
                 padding: 4px 12px;
-                border: 1.5px solid #3C4043;
-                border-radius: 5px;
+                border: 1px solid rgba(60, 64, 67, 200);
+                border-radius: 7px;
                 font-size: 11px;
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2D2F33, stop:1 #2B2B2B);
                 color: #E8EAED;
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3C4043, stop:1 #3A3B3F);
-                border-color: #5F6368;
+                border: 1px solid rgba(95, 99, 104, 220);
             }
             QPushButton:pressed {
                 background: #242628;
-                border-color: #4A4D51;
+                border: 1px solid rgba(74, 77, 81, 180);
             }
         """)
         browse_btn.clicked.connect(self._browse_sound_file)
         
         test_btn = QtWidgets.QPushButton("▶")
         test_btn.setFixedSize(28, 28)
+        test_btn.setGraphicsEffect(self._create_smooth_effect())
         test_btn.setStyleSheet("""
             QPushButton {
                 padding: 0px;
-                border: 1.5px solid #3C4043;
-                border-radius: 5px;
+                border: 1px solid rgba(60, 64, 67, 200);
+                border-radius: 7px;
                 font-size: 12px;
                 font-weight: bold;
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2D2F33, stop:1 #2B2B2B);
@@ -316,7 +325,7 @@ class SettingsDialog(QtWidgets.QDialog):
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3C4043, stop:1 #3A3B3F);
-                border-color: #5F6368;
+                border: 1px solid rgba(95, 99, 104, 220);
             }
             QPushButton:pressed {
                 background: #242628;
@@ -328,11 +337,12 @@ class SettingsDialog(QtWidgets.QDialog):
         self.loop_btn = QtWidgets.QPushButton("↻")
         self.loop_btn.setFixedSize(28, 28)
         self.loop_btn.setCheckable(True)
+        self.loop_btn.setGraphicsEffect(self._create_smooth_effect())
         self.loop_btn.setStyleSheet("""
             QPushButton {
                 padding: 0px;
-                border: 1.5px solid #3C4043;
-                border-radius: 5px;
+                border: 1px solid rgba(60, 64, 67, 200);
+                border-radius: 7px;
                 font-size: 16px;
                 font-weight: bold;
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2D2F33, stop:1 #2B2B2B);
@@ -340,11 +350,11 @@ class SettingsDialog(QtWidgets.QDialog):
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3C4043, stop:1 #3A3B3F);
-                border-color: #5F6368;
+                border: 1px solid rgba(95, 99, 104, 220);
             }
             QPushButton:checked {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3C4043, stop:1 #3A3B3F);
-                border: 1.5px solid #8AB4F8;
+                border: 1px solid rgba(138, 180, 248, 240);
                 color: #8AB4F8;
             }
             QPushButton:pressed {
@@ -355,11 +365,12 @@ class SettingsDialog(QtWidgets.QDialog):
         
         clear_btn = QtWidgets.QPushButton("×")
         clear_btn.setFixedSize(28, 28)
+        clear_btn.setGraphicsEffect(self._create_smooth_effect())
         clear_btn.setStyleSheet("""
             QPushButton {
                 padding: 0px;
-                border: 1.5px solid #3C4043;
-                border-radius: 5px;
+                border: 1px solid rgba(60, 64, 67, 200);
+                border-radius: 7px;
                 font-size: 16px;
                 font-weight: bold;
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2D2F33, stop:1 #2B2B2B);
@@ -367,7 +378,7 @@ class SettingsDialog(QtWidgets.QDialog):
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(255,100,100,45), stop:1 rgba(255,100,100,35));
-                border-color: rgba(232,71,71,120);
+                border: 1px solid rgba(232,71,71,180);
             }
             QPushButton:pressed {
                 background: rgba(255,100,100,55);
@@ -430,11 +441,12 @@ class SettingsDialog(QtWidgets.QDialog):
         
         light_btn = QtWidgets.QPushButton("Light Activity\n2000ml")
         light_btn.setMinimumHeight(50)
+        light_btn.setGraphicsEffect(self._create_smooth_effect())
         light_btn.setStyleSheet("""
             QPushButton {
                 padding: 8px;
-                border: 1.5px solid #3C4043;
-                border-radius: 7px;
+                border: 1px solid rgba(60, 64, 67, 200);
+                border-radius: 8px;
                 font-size: 11px;
                 font-weight: 600;
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2D2F33, stop:1 #2B2B2B);
@@ -442,7 +454,7 @@ class SettingsDialog(QtWidgets.QDialog):
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3C4043, stop:1 #3A3B3F);
-                border: 1.5px solid #8AB4F8;
+                border: 1px solid rgba(138, 180, 248, 240);
             }
             QPushButton:pressed {
                 background: #242628;
@@ -452,11 +464,13 @@ class SettingsDialog(QtWidgets.QDialog):
         
         moderate_btn = QtWidgets.QPushButton("Moderate\n2500ml")
         moderate_btn.setMinimumHeight(50)
+        moderate_btn.setGraphicsEffect(self._create_smooth_effect())
         moderate_btn.setStyleSheet(light_btn.styleSheet())
         moderate_btn.clicked.connect(lambda: self.goal_spin.setValue(2500))
         
         high_btn = QtWidgets.QPushButton("High Activity\n3000ml")
         high_btn.setMinimumHeight(50)
+        high_btn.setGraphicsEffect(self._create_smooth_effect())
         high_btn.setStyleSheet(light_btn.styleSheet())
         high_btn.clicked.connect(lambda: self.goal_spin.setValue(3000))
         
@@ -476,11 +490,12 @@ class SettingsDialog(QtWidgets.QDialog):
         
         cancel_btn = QtWidgets.QPushButton("Cancel")
         cancel_btn.setMinimumHeight(32)
+        cancel_btn.setGraphicsEffect(self._create_smooth_effect())
         cancel_btn.setStyleSheet("""
             QPushButton {
                 padding: 6px 18px;
-                border: 1.5px solid #3C4043;
-                border-radius: 7px;
+                border: 1px solid rgba(60, 64, 67, 200);
+                border-radius: 8px;
                 font-size: 13px;
                 font-weight: 600;
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #303134, stop:1 #2D2F33);
@@ -488,21 +503,23 @@ class SettingsDialog(QtWidgets.QDialog):
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3C4043, stop:1 #3A3B3F);
-                border-color: #5F6368;
+                border: 1px solid rgba(95, 99, 104, 220);
             }
             QPushButton:pressed {
                 background: #242628;
+                border: 1px solid rgba(95, 99, 104, 180);
             }
         """)
         cancel_btn.clicked.connect(self.reject)
         
         save_btn = QtWidgets.QPushButton("Save Changes")
         save_btn.setMinimumHeight(32)
+        save_btn.setGraphicsEffect(self._create_smooth_effect())
         save_btn.setStyleSheet("""
             QPushButton {
                 padding: 6px 18px;
-                border: 1.5px solid #4A4D51;
-                border-radius: 7px;
+                border: 1px solid rgba(74, 77, 81, 220);
+                border-radius: 8px;
                 font-size: 13px;
                 font-weight: 600;
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3C4043, stop:1 #303134);
@@ -510,22 +527,23 @@ class SettingsDialog(QtWidgets.QDialog):
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #4A4D51, stop:1 #3C4043);
-                border-color: #5F6368;
+                border: 1px solid rgba(95, 99, 104, 240);
             }
             QPushButton:pressed {
                 background: #202124;
-                border-color: #3C4043;
+                border: 1px solid rgba(60, 64, 67, 200);
             }
         """)
         save_btn.clicked.connect(self._save_settings)
         
         reset_btn = QtWidgets.QPushButton("Reset to Defaults")
         reset_btn.setMinimumHeight(32)
+        reset_btn.setGraphicsEffect(self._create_smooth_effect())
         reset_btn.setStyleSheet("""
             QPushButton {
                 padding: 6px 18px;
-                border: 1.5px solid rgba(232,71,71,80);
-                border-radius: 7px;
+                border: 1px solid rgba(232, 71, 71, 100);
+                border-radius: 8px;
                 font-size: 13px;
                 font-weight: 600;
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(232,71,71,30), stop:1 rgba(232,71,71,25));
@@ -533,21 +551,23 @@ class SettingsDialog(QtWidgets.QDialog):
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(232,71,71,55), stop:1 rgba(232,71,71,45));
-                border: 1.5px solid #E84747;
+                border: 1px solid rgba(232, 71, 71, 150);
             }
             QPushButton:pressed {
                 background: rgba(232,71,71,65);
+                border: 1px solid rgba(232, 71, 71, 120);
             }
         """)
         reset_btn.clicked.connect(self._reset_to_defaults)
         
         reset_water_btn = QtWidgets.QPushButton("Reset Water")
         reset_water_btn.setMinimumHeight(32)
+        reset_water_btn.setGraphicsEffect(self._create_smooth_effect())
         reset_water_btn.setStyleSheet("""
             QPushButton {
                 padding: 6px 18px;
-                border: 1.5px solid rgba(100,150,232,80);
-                border-radius: 7px;
+                border: 1px solid rgba(100, 150, 232, 100);
+                border-radius: 8px;
                 font-size: 13px;
                 font-weight: 600;
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(100,150,232,30), stop:1 rgba(100,150,232,25));
@@ -555,10 +575,11 @@ class SettingsDialog(QtWidgets.QDialog):
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(100,150,232,55), stop:1 rgba(100,150,232,45));
-                border: 1.5px solid #6496E8;
+                border: 1px solid rgba(100, 150, 232, 150);
             }
             QPushButton:pressed {
                 background: rgba(100,150,232,65);
+                border: 1px solid rgba(100, 150, 232, 120);
             }
         """)
         reset_water_btn.clicked.connect(self._reset_water)
@@ -577,11 +598,12 @@ class SettingsDialog(QtWidgets.QDialog):
         
         close_app_btn = QtWidgets.QPushButton("Close HydraPing")
         close_app_btn.setMinimumHeight(38)
+        close_app_btn.setGraphicsEffect(self._create_smooth_effect())
         close_app_btn.setStyleSheet("""
             QPushButton {
                 padding: 8px 20px;
-                border: 1.5px solid rgba(232,71,71,100);
-                border-radius: 9px;
+                border: 1px solid rgba(232, 71, 71, 120);
+                border-radius: 10px;
                 font-size: 14px;
                 font-weight: 600;
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(232,71,71,35), stop:1 rgba(232,71,71,25));
@@ -589,11 +611,11 @@ class SettingsDialog(QtWidgets.QDialog):
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(232,71,71,55), stop:1 rgba(232,71,71,45));
-                border: 1.5px solid #E84747;
+                border: 1px solid rgba(232, 71, 71, 180);
             }
             QPushButton:pressed {
                 background: rgba(232,71,71,75);
-                border-color: #E84747;
+                border: 1px solid rgba(232, 71, 71, 150);
             }
         """)
         close_app_btn.clicked.connect(self._terminate_app)
