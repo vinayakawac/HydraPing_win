@@ -1044,9 +1044,10 @@ class OverlayWindow(QtWidgets.QWidget):
         self._layout_manager.set_alert_mode(enabled)
         
         if enabled:
-            # Alert state
+            # Alert state - hide message but show consumption info
             self._message_label.setVisible(False)
-            self._info_label.setVisible(False)
+            self._info_label.setText(f"{self._current_consumed}ml / {self._current_goal}ml")
+            self._info_label.setVisible(True)
             
             self._animate_opacity(1.0)
             

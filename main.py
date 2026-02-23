@@ -73,8 +73,11 @@ class HydraPingController(QtCore.QObject):
         self._ai_message_timer.setInterval(30000)  # 30 seconds
         self._ai_message_timer.timeout.connect(self._update_smart_message)
         
-        # Tracking
+        # Tracking - snap initial reminder to next clock-aligned time
         self.last_reminder_time = time.time()
+        self._next_reminder_time = self._calc_next_clock_aligned_time(
+            self.settings.get('reminder_interval_minutes', 45)
+        )
         self.last_date = datetime.now().date()
         self._in_sleep_hours = False
         self._bedtime_warning_shown = False
@@ -82,6 +85,28 @@ class HydraPingController(QtCore.QObject):
         self._snooze_end_time = 0
         
         # Tray removed
+        
+    def _calc_next_clock_aligned_time(self, interval_minutes):
+        """Calculate the next reminder time aligned to a multiple of 5 on the clock.
+        
+        E.g. if interval is 25 min and current time is 2:03 PM,
+        the raw next time would be 2:28 PM, which snaps to 2:30 PM.
+        """
+        from datetime import timedelta
+        now = datetime.now()
+        raw_next = now + timedelta(minutes=interval_minutes)
+        
+        # Snap to nearest multiple of 5 minutes
+        minute = raw_next.minute
+        snapped_minute = round(minute / 5) * 5
+        
+        if snapped_minute == 60:
+            raw_next = raw_next.replace(minute=0, second=0, microsecond=0)
+            raw_next += timedelta(hours=1)
+        else:
+            raw_next = raw_next.replace(minute=snapped_minute, second=0, microsecond=0)
+        
+        return raw_next.timestamp()
         
     def start(self):
         """Start the application - show overlay"""
@@ -104,26 +129,26 @@ class HydraPingController(QtCore.QObject):
                     self._is_snoozed = False
                     self._trigger_alert()
                     self.last_reminder_time = time.time()
+                    base_interval = self.settings.get('reminder_interval_minutes', 45)
+                    self._next_reminder_time = self._calc_next_clock_aligned_time(base_interval)
                 else:
                     # Show snooze countdown
                     mins = snooze_remaining // 60
                     secs = snooze_remaining % 60
                     self._overlay.update_countdown(f"Snoozed: {mins:02d}:{secs:02d}")
             else:
-                # Get base interval and apply intelligent adjustments
-                base_interval = self.settings.get('reminder_interval_minutes', 45)
-                
-                # Apply pattern-based adjustment
-                adjusted_interval = self.pattern_analyzer.get_smart_reminder_delay(base_interval)
-                
-                elapsed_seconds = time.time() - self.last_reminder_time
-                remaining_seconds = int((adjusted_interval * 60) - elapsed_seconds)
+                # Calculate remaining seconds until the clock-aligned reminder
+                remaining_seconds = int(self._next_reminder_time - time.time())
                 
                 # Check if time to trigger alert
                 if remaining_seconds <= 0:
                     self._trigger_alert()
                     self.last_reminder_time = time.time()
-                    remaining_seconds = adjusted_interval * 60
+                    # Schedule next reminder aligned to clock
+                    base_interval = self.settings.get('reminder_interval_minutes', 45)
+                    adjusted_interval = self.pattern_analyzer.get_smart_reminder_delay(base_interval)
+                    self._next_reminder_time = self._calc_next_clock_aligned_time(adjusted_interval)
+                    remaining_seconds = int(self._next_reminder_time - time.time())
                 
                 # Update display with AI prediction
                 if remaining_seconds > 0:
@@ -225,6 +250,9 @@ class HydraPingController(QtCore.QObject):
         self._overlay.set_alert_mode(False)
         self._is_snoozed = False
         self.last_reminder_time = time.time()
+        base_interval = self.settings.get('reminder_interval_minutes', 45)
+        adjusted_interval = self.pattern_analyzer.get_smart_reminder_delay(base_interval)
+        self._next_reminder_time = self._calc_next_clock_aligned_time(adjusted_interval)
         
     def _handle_snooze(self):
         """Handle snooze button click"""
@@ -241,6 +269,9 @@ class HydraPingController(QtCore.QObject):
             self._overlay.set_alert_mode(False)
             self._is_snoozed = False
             self.last_reminder_time = time.time()
+            base_interval = self.settings.get('reminder_interval_minutes', 45)
+            adjusted_interval = self.pattern_analyzer.get_smart_reminder_delay(base_interval)
+            self._next_reminder_time = self._calc_next_clock_aligned_time(adjusted_interval)
             
     def _log_water(self, amount):
         """Log water intake and update UI"""

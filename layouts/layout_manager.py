@@ -109,8 +109,13 @@ class LayoutManager:
         self._add_widgets_to_layout(layout)
     
     def _add_widgets_to_layout(self, layout):
-        """Add widgets to layout based on configuration"""
+        """Add widgets to layout based on configuration.
+        Snooze/drink buttons are always added so they appear inline when
+        toggled visible in alert mode. Other widgets follow their config."""
         config = self.current_config
+        
+        # Widgets that toggle during alert must always be in the layout
+        always_add = {'_snooze_button', '_drink_button'}
         
         # Define widget order and their configs
         widget_order = [
@@ -125,15 +130,17 @@ class LayoutManager:
         for widget_name, widget_config in widget_order:
             if not hasattr(self.window, widget_name):
                 continue
+            
+            # Skip non-alert widgets that are hidden in this layout
+            if widget_name not in always_add and not widget_config.visible:
+                continue
                 
             widget = getattr(self.window, widget_name)
             
-            # Add to layout if visible
-            if widget_config.visible:
-                if widget_config.stretch > 0:
-                    layout.addWidget(widget, widget_config.stretch)
-                else:
-                    layout.addWidget(widget, 0, widget_config.alignment)
+            if widget_config.stretch > 0:
+                layout.addWidget(widget, widget_config.stretch)
+            else:
+                layout.addWidget(widget, 0, widget_config.alignment)
     
     def _apply_window_mask(self):
         """Clear any mask - rely on WA_TranslucentBackground + border-radius for smooth edges.
@@ -186,11 +193,13 @@ class LayoutManager:
         config = self.current_config
         
         if is_alert:
-            # Switch to alert layout if configured
+            # Switch to alert layout if configured (e.g. circular -> rectangular)
             if config.alert_switches_layout and config.alert_target_layout:
                 self.apply_layout(config.alert_target_layout)
+                # Re-read config after layout switch
+                config = self.current_config
             
-            # Show buttons if configured
+            # Show buttons if configured (check NEW config after possible switch)
             if config.show_buttons_in_alert:
                 if hasattr(self.window, '_drink_button'):
                     self.window._drink_button.setVisible(True)
@@ -204,7 +213,7 @@ class LayoutManager:
                 self.window._snooze_button.setVisible(False)
             
             # Return to preferred layout if we switched
-            if config.alert_switches_layout and self.current_layout_name != self.preferred_layout:
+            if self.current_layout_name != self.preferred_layout:
                 self.apply_layout(self.preferred_layout)
     
     def get_current_config(self) -> LayoutConfig:

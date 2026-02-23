@@ -133,7 +133,7 @@ class SettingsDialog(QtWidgets.QDialog):
         
         # Reminder Interval
         self.interval_spin = QtWidgets.QSpinBox()
-        self.interval_spin.setRange(1, 240)
+        self.interval_spin.setRange(5, 240)
         self.interval_spin.setSingleStep(1)
         self.interval_spin.setSuffix(" min")
         self.interval_spin.setMinimumWidth(150)
@@ -151,7 +151,7 @@ class SettingsDialog(QtWidgets.QDialog):
         
         # Snooze Duration
         self.snooze_spin = QtWidgets.QSpinBox()
-        self.snooze_spin.setRange(1, 30)
+        self.snooze_spin.setRange(5, 30)
         self.snooze_spin.setSingleStep(1)
         self.snooze_spin.setSuffix(" min")
         self.snooze_spin.setMinimumWidth(150)

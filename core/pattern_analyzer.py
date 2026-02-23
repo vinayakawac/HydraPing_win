@@ -469,31 +469,27 @@ class PatternAnalyzer:
                 try:
                     minutes_until = (predicted_time - datetime.now()).total_seconds() / 60
                     
-                    # If high confidence and prediction is soon, align reminder
-                    if confidence > 0.6 and 0 < minutes_until < base_interval * 1.5:
+                    # If high confidence and prediction is soon, shorten reminder
+                    # Never exceed base_interval - AI can only make it sooner
+                    if confidence > 0.6 and 0 < minutes_until < base_interval:
                         adjusted = max(5, int(minutes_until * 0.8))
-                        # Ensure adjusted interval is reasonable
-                        if 5 <= adjusted <= 240:
+                        if 5 <= adjusted < base_interval:
                             return adjusted
                 except (TypeError, AttributeError) as e:
                     self.logger.warning(f"Prediction time calculation failed: {e}")
             
-            # Check if ahead of schedule
+            # Check if behind schedule - only shorten, never lengthen
             try:
                 ahead = self.is_ahead_of_schedule()
                 
-                if ahead is True:
-                    # User is doing well, can relax reminders slightly
-                    adjusted = int(base_interval * 1.2)
-                    return max(5, min(240, adjusted))
-                elif ahead is False:
+                if ahead is False:
                     # User is behind, increase reminder frequency
                     adjusted = int(base_interval * 0.8)
-                    return max(5, min(240, adjusted))
+                    return max(5, min(base_interval, adjusted))
             except Exception as e:
                 self.logger.warning(f"Schedule check failed in smart delay: {e}")
             
-            # Default: return base interval
+            # Default: return base interval as-is
             return int(max(5, min(240, base_interval)))
             
         except Exception as e:
