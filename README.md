@@ -14,32 +14,37 @@ Always-on-top glassmorphic overlay perfect for any workflow with **two display m
 - **Info display** showing consumed/goal on hover
 - **Draggable** - position anywhere on screen
 
-### Minimal Mode (Circular)
-- **Ultra-minimal 44x44px circle** for distraction-free work
+### Minimal Mode (Rounded Square)
+- **Ultra-minimal 40x40px rounded square** matching taskbar icon size
 - **Only progress wheel** visible - perfect for deep focus
-- **Auto-switches to Normal** during alerts
+- **Auto-expands to Normal** during alerts with inline buttons
+- **Returns to Minimal** after drink/snooze actions
 - **Double-click** to access settings
-- **Smooth circular border** with anti-aliasing
-- **Perfectly centered** progress ring
+- **Smooth anti-aliased borders** with 8px radius
+- **Perfectly centered** 34x34 progress ring
 
 **Common Features:**
 - **AI Predictions** - "Based on your pattern, you'll likely need water in 47 minutes"
 - **Smart Scheduling** - Learns your patterns for optimal reminder timing
+- **Clock-Aligned Reminders** - Syncs to nearest 5-minute mark on real-world clock
 - **Auto-hide on sleep** - respects your sleep schedule
 - **Theme-aware** - 6 beautiful glassmorphic themes
 - **Performance optimized** - minimal CPU/memory footprint
-- **Adaptive borders** - smooth rendering for any shape
-- **Perfect for work or study**
+- **Smooth rendering** - anti-aliased borders without bitmap masks
+- **Inline alert buttons** - Snooze/Drink appear inside the overlay bar
 
 ## Features
 
-- **Dual Display Modes** - Switch between Normal (full bar) and Minimal (44px circle)
+- **Dual Display Modes** - Switch between Normal (full bar) and Minimal (40x40 rounded square)
 - **AI-Powered Predictions** - Smart pattern analysis predicts when you'll need water
 - **Intelligent Scheduling** - Learns your drinking patterns for optimal reminder timing
+- **Clock-Aligned Timers** - Reminders snap to multiples of 5 on the real-world clock
 - **Modern Glass-morphism UI** - Beautiful, elegant interface with smooth animations
+- **Inline Alert Buttons** - Snooze and Drink Now appear inside the overlay during alerts
+- **Alert Consumption Display** - Shows current intake (e.g., 400ml / 3000ml) during reminders
 - **Configuration-Based Layouts** - Flexible layout system for easy customization
 - **High Performance** - Optimized dual-timer system with smart caching
-- **Smart Reminders** - Customizable intervals with sleep mode
+- **Smart Reminders** - Customizable intervals (5-240 min) with sleep mode
 - **Progress Tracking** - Circular progress ring with live updates
 - **Motivational Messages** - Rotating inspirational quotes with AI insights
 - **Confetti Celebration** - Visual celebration on goal achievement
@@ -100,7 +105,8 @@ The application starts directly in **Overlay Mode** - a minimalist always-on-top
 **Adjusting Settings:**
 - Click menu (⋮) → Settings
 - Daily goal: 250-10000ml
-- Reminder interval: 5-240 minutes
+- Reminder interval: 5-240 minutes (clock-aligned to multiples of 5)
+- Snooze duration: 5-30 minutes
 - Default sip size: 50-1000ml
 - Sleep hours: Configure start/end times
 - Theme: Choose from 6 glassmorphic themes
@@ -134,7 +140,8 @@ The application starts directly in **Overlay Mode** - a minimalist always-on-top
 
 **Smart Scheduling:**
 - **Pattern Learning**: Learns your drinking patterns with statistical validation
-- **Adaptive Reminders**: Increases frequency if behind, relaxes if ahead
+- **Adaptive Reminders**: Increases frequency if behind, never exceeds your configured interval
+- **Clock-Aligned Timing**: Reminders snap to nearest 5-minute mark on the real-world clock
 - **Schedule Tracking**: Monitors adherence throughout the day with 16-hour active window
 - **Validation**: Ensures all data is valid before making decisions
 - Displays: "Great pace! You're ahead of schedule"
@@ -200,8 +207,10 @@ The database automatically migrates from old multi-user schema if detected.
 - **Animation Pooling**: Reusable animation instances prevent conflicts
 - **Sound Timer Reuse**: Single timer instance for alert sound loops
 - **Event Consolidation**: Unified hover handling reduces code duplication
-- **Smooth Rendering**: Anti-aliased borders with floating-point precision
-- **Adaptive Layouts**: Auto-switching between modes during alerts
+- **Smooth Rendering**: WA_TranslucentBackground + dynamic border-radius (no bitmap masks)
+- **Adaptive Layouts**: Auto-switching between Minimal and Normal during alerts
+- **Inline Alert Buttons**: Snooze/Drink always in layout flow, toggled via visibility
+- **Clock-Aligned Timers**: Snaps reminders to nearest 5-minute real-world clock mark
 
 ### Optimization Results
 
@@ -248,9 +257,10 @@ pip install --upgrade PySide6
 - Restart application to reset position
 
 ### Minimal mode issues
-- Progress wheel not centered: Fixed with AlignCenter layout
-- Borders not smooth: Using anti-aliasing and floating-point rendering
+- Progress wheel not centered: Fixed with 0-margin layout and 34x34 widget in 40x40 window
+- Borders not smooth: Using WA_TranslucentBackground + border-radius (no bitmap masks)
 - Layout not switching: Check window_shape in database settings
+- Alert buttons detached: Buttons are always in the layout, toggled via visibility
 
 ### Database errors
 - Delete `hydra_ping.db` to reset
@@ -284,6 +294,7 @@ pip install --upgrade PySide6
 | Database Queries | 95% reduced | Smart caching layer |
 | Animation FPS | 60fps | Smooth glassmorphic effects |
 | Timer Precision | 1 second | Accurate countdown display |
+| Timer Alignment | 5-min clock | Syncs to real-world clock multiples of 5 |
 | System Checks | Every 60s | 98% reduction from previous |
 
 ## License
