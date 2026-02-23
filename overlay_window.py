@@ -168,40 +168,54 @@ class OverlayWindow(QtWidgets.QWidget):
         
         # Draw shape based on current window shape
         if self._window_shape == 'circular':
-            center = QtCore.QPointF(rect.width() / 2.0, rect.height() / 2.0)
-            radius = min(rect.width(), rect.height()) / 2.0
+            # Minimal mode: small rounded square matching taskbar icon size
+            corner_radius = 8.0
             
-            # Soft outer glow (2 feathered layers)
+            # Soft outer shadow
             for i in range(2):
-                glow_alpha = 18 - (i * 8)
-                glow_pen = QtGui.QPen(QtGui.QColor(0, 0, 0, glow_alpha))
-                glow_pen.setWidthF(1.5 - (i * 0.5))
-                glow_pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
-                painter.setPen(glow_pen)
+                shadow_alpha = 14 - (i * 6)
+                shadow_pen = QtGui.QPen(QtGui.QColor(0, 0, 0, shadow_alpha))
+                shadow_pen.setWidthF(1.5 - (i * 0.5))
+                shadow_pen.setJoinStyle(QtCore.Qt.PenJoinStyle.RoundJoin)
+                shadow_pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
+                painter.setPen(shadow_pen)
                 painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
-                painter.drawEllipse(center, radius - 0.5 - i * 0.8, radius - 0.5 - i * 0.8)
+                shadow_path = QtGui.QPainterPath()
+                offset = 1.0 + i * 0.4
+                shadow_path.addRoundedRect(
+                    QtCore.QRectF(rect).adjusted(offset, offset, -offset, -offset),
+                    corner_radius - i * 0.3, corner_radius - i * 0.3
+                )
+                painter.drawPath(shadow_path)
             
-            # Main border using QPainterPath for maximum smoothness
-            border_path = QtGui.QPainterPath()
+            # Main border
+            main_path = QtGui.QPainterPath()
             inset = 1.0
-            border_rect = QtCore.QRectF(inset, inset, rect.width() - inset * 2, rect.height() - inset * 2)
-            border_path.addEllipse(border_rect)
+            main_path.addRoundedRect(
+                QtCore.QRectF(rect).adjusted(inset, inset, -inset, -inset),
+                corner_radius, corner_radius
+            )
             
-            gradient = QtGui.QRadialGradient(center, radius)
-            gradient.setColorAt(0, QtGui.QColor(255, 255, 255, 0))
-            gradient.setColorAt(0.82, QtGui.QColor(255, 255, 255, 55))
-            gradient.setColorAt(1, QtGui.QColor(255, 255, 255, 85))
-            
-            pen = QtGui.QPen(QtGui.QBrush(gradient), 1.5)
+            pen = QtGui.QPen(QtGui.QColor(255, 255, 255, 65))
+            pen.setWidthF(1.5)
             pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
+            pen.setJoinStyle(QtCore.Qt.PenJoinStyle.RoundJoin)
             painter.setPen(pen)
-            painter.drawPath(border_path)
+            painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+            painter.drawPath(main_path)
             
             # Subtle inner highlight
-            highlight_pen = QtGui.QPen(QtGui.QColor(255, 255, 255, 25))
+            inner_path = QtGui.QPainterPath()
+            inner_inset = 2.2
+            inner_path.addRoundedRect(
+                QtCore.QRectF(rect).adjusted(inner_inset, inner_inset, -inner_inset, -inner_inset),
+                corner_radius - 1, corner_radius - 1
+            )
+            highlight_pen = QtGui.QPen(QtGui.QColor(255, 255, 255, 22))
             highlight_pen.setWidthF(0.5)
+            highlight_pen.setJoinStyle(QtCore.Qt.PenJoinStyle.RoundJoin)
             painter.setPen(highlight_pen)
-            painter.drawEllipse(center, radius - 2.5, radius - 2.5)
+            painter.drawPath(inner_path)
         else:
             # Rounded rectangle with QPainterPath for smooth curves
             corner_radius = 12.0

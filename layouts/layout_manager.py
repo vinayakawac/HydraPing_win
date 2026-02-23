@@ -147,11 +147,9 @@ class LayoutManager:
         if not config:
             return
 
-        if config.window_shape == "circle":
-            w, h = config.window_size
-            r = min(w, h) // 2
-            container_radius = r
-            bg_radius = r + 1
+        if config.window_shape == "square":
+            container_radius = 8
+            bg_radius = 9
         else:
             container_radius = 12
             bg_radius = 14
