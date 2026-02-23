@@ -136,30 +136,53 @@ class LayoutManager:
                     layout.addWidget(widget, 0, widget_config.alignment)
     
     def _apply_window_mask(self):
-        """Apply window mask for circular shape"""
-        config = self.current_config
-        
-        if config.window_shape == "circle":
-            # Use QPainterPath for smoother circular edges
-            width, height = config.window_size
-            
-            # Create a bitmap to use as mask
-            bitmap = QtGui.QBitmap(width, height)
-            bitmap.clear()
-            
-            painter = QtGui.QPainter(bitmap)
-            painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
-            painter.setBrush(QtCore.Qt.BrushStyle.SolidPattern)
-            painter.setPen(QtCore.Qt.PenStyle.NoPen)
-            
-            # Draw smooth circle
-            painter.drawEllipse(0, 0, width, height)
-            painter.end()
-            
-            self.window.setMask(bitmap)
-        else:
-            self.window.clearMask()
+        """Clear any mask - rely on WA_TranslucentBackground + border-radius for smooth edges.
+        QBitmap masks are 1-bit (pixel on/off) and cannot produce anti-aliased curves."""
+        self.window.clearMask()
+        self._update_shape_border_radius()
     
+    def _update_shape_border_radius(self):
+        """Update container/bg_box border-radius to match current shape for smooth edges"""
+        config = self.current_config
+        if not config:
+            return
+
+        if config.window_shape == "circle":
+            w, h = config.window_size
+            r = min(w, h) // 2
+            container_radius = r
+            bg_radius = r + 1
+        else:
+            container_radius = 12
+            bg_radius = 14
+
+        if hasattr(self.window, '_container') and hasattr(self.window, 'theme_manager'):
+            theme = self.window.theme_manager.get_theme()
+            self.window._container.setStyleSheet(f"""
+                #overlayContainer {{
+                    background: qlineargradient(
+                        x1:0, y1:0, x2:1, y2:1,
+                        stop:0 {theme['overlay_bg_start']},
+                        stop:1 {theme['overlay_bg_end']}
+                    );
+                    border-radius: {container_radius}px;
+                    border: 1px solid {theme['overlay_border']};
+                }}
+            """)
+        if hasattr(self.window, '_bg_box') and hasattr(self.window, 'theme_manager'):
+            theme = self.window.theme_manager.get_theme()
+            self.window._bg_box.setStyleSheet(f"""
+                #hoverBackground {{
+                    background: qlineargradient(
+                        x1:0, y1:0, x2:1, y2:1,
+                        stop:0 {theme['hover_bg_start']},
+                        stop:1 {theme['hover_bg_end']}
+                    );
+                    border-radius: {bg_radius}px;
+                    border: 1px solid {theme['hover_border']};
+                }}
+            """)
+
     def set_alert_mode(self, is_alert: bool):
         """Handle alert mode transitions"""
         config = self.current_config

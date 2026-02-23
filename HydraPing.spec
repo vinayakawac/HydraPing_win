@@ -11,8 +11,8 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[(str(python_dll), '.')],
-    datas=[('icon.png', '.'), ('icon.ico', '.'), ('core', 'core'), ('theme_manager.py', '.'), ('settings_dialog.py', '.'), ('overlay_window.py', '.'), ('db_schema.py', '.')],
-    hiddenimports=['PySide6.QtCore', 'PySide6.QtWidgets', 'PySide6.QtGui', 'sqlite3', 'hashlib', 'ctypes', 'winsound'],
+    datas=[('icon.png', '.'), ('core', 'core'), ('layouts', 'layouts'), ('theme_manager.py', '.'), ('settings_dialog.py', '.'), ('overlay_window.py', '.'), ('confetti_widget.py', '.'), ('db_schema.py', '.')],
+    hiddenimports=['PySide6.QtCore', 'PySide6.QtWidgets', 'PySide6.QtGui', 'sqlite3', 'hashlib', 'ctypes', 'winsound', 'statistics', 'logging'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -41,5 +41,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['icon.ico'],
+    icon=['icon.png'],
 )

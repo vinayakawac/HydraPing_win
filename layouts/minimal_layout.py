@@ -54,6 +54,5 @@ class MinimalLayout(BaseLayout):
         return False  # In circular mode, click anywhere to drink
     
     def get_window_mask(self, width, height):
-        """Return QRegion mask for window shape, or None for no mask"""
-        # Create circular mask
-        return QtGui.QRegion(0, 0, width, height, QtGui.QRegion.RegionType.Ellipse)
+        """Return None - no mask needed. WA_TranslucentBackground + border-radius handles shape."""
+        return None
